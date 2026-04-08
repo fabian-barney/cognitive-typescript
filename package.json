@@ -1,0 +1,37 @@
+{
+  "name": "cognitive-typescript-parent",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Cognitive Complexity metrics for TypeScript",
+  "license": "Apache-2.0",
+  "author": "Fabian Barney (https://github.com/fabian-barney)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fabian-barney/cognitive-typescript.git"
+  },
+  "homepage": "https://github.com/fabian-barney/cognitive-typescript",
+  "bugs": {
+    "url": "https://github.com/fabian-barney/cognitive-typescript/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "npm@11.6.2",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b packages/core packages/cli packages/vitest packages/jest",
+    "cognitive-typescript-check": "npm run build && vitest run --config vitest.cognitive.config.ts",
+    "test": "npm run build && vitest run",
+    "pack": "npm pack --workspaces",
+    "verify-release-version": "node ./scripts/verify-release-version.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.1",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.9",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  }
+}
