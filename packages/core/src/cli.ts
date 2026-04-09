@@ -36,38 +36,11 @@ export function parseCliArguments(args: string[]): CliArguments {
     return { mode: "all", fileArgs: [] };
   }
 
-  const state = {
-    help: false,
-    changed: false,
-    fileArgs: [] as string[]
-  };
-
+  const state = createCliParseState();
   for (const arg of args) {
-    if (!arg.startsWith("--")) {
-      state.fileArgs.push(arg);
-      continue;
-    }
-    if (arg === "--help") {
-      state.help = true;
-      continue;
-    }
-    if (arg === "--changed") {
-      state.changed = true;
-      continue;
-    }
-    throw new Error(`Unknown option: ${arg}`);
+    applyCliArgument(state, arg);
   }
-
-  if (state.help) {
-    return { mode: "help", fileArgs: [] };
-  }
-  if (state.changed && state.fileArgs.length > 0) {
-    throw new Error("--changed cannot be combined with file arguments");
-  }
-  return {
-    mode: state.changed ? "changed" : state.fileArgs.length > 0 ? "explicit" : "all",
-    fileArgs: state.fileArgs
-  };
+  return finalizeCliArguments(state);
 }
 
 export async function runCli(
@@ -134,4 +107,59 @@ async function analyzeCliProject(
     writeLine(stderr, (error as Error).message);
     return null;
   }
+}
+
+interface CliParseState {
+  help: boolean;
+  changed: boolean;
+  fileArgs: string[];
+}
+
+function createCliParseState(): CliParseState {
+  return {
+    help: false,
+    changed: false,
+    fileArgs: []
+  };
+}
+
+function applyCliArgument(state: CliParseState, arg: string): void {
+  if (!arg.startsWith("--")) {
+    state.fileArgs.push(arg);
+    return;
+  }
+  applyCliOption(state, arg);
+}
+
+function applyCliOption(state: CliParseState, arg: string): void {
+  switch (arg) {
+    case "--help":
+      state.help = true;
+      return;
+    case "--changed":
+      state.changed = true;
+      return;
+    default:
+      throw new Error(`Unknown option: ${arg}`);
+  }
+}
+
+function finalizeCliArguments(state: CliParseState): CliArguments {
+  if (state.help) {
+    return { mode: "help", fileArgs: [] };
+  }
+  if (state.changed && state.fileArgs.length > 0) {
+    throw new Error("--changed cannot be combined with file arguments");
+  }
+  return {
+    mode: resolveCliMode(state),
+    fileArgs: state.fileArgs
+  };
+}
+
+function resolveCliMode(state: CliParseState): CliArguments["mode"] {
+  if (state.changed) {
+    return "changed";
+  }
+  return state.fileArgs.length > 0 ? "explicit" : "all";
 }

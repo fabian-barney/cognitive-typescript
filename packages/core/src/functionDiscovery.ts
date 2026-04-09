@@ -227,19 +227,14 @@ function shouldIgnoreDeclarativeOuterFunction(node: ts.Node, method: InternalMet
   if (method.baseCognitiveComplexity !== 0) {
     return false;
   }
-  if (!(ts.isFunctionExpression(node) || ts.isArrowFunction(node))) {
+  if (!isTopLevelDeclarativeWrapper(node)) {
     return false;
   }
-  if (!ts.isBlock(node.body)) {
+  const statements = node.body.statements;
+  if (!hasDeclarativeMethodLikeTopLevel(statements)) {
     return false;
   }
-  if (hasEnclosingFunction(node)) {
-    return false;
-  }
-  if (!hasDeclarativeMethodLikeTopLevel(node.body.statements)) {
-    return false;
-  }
-  return node.body.statements.every(isDeclarativeTopLevelStatement);
+  return statements.every(isDeclarativeTopLevelStatement);
 }
 
 function hasEnclosingFunction(node: ts.Node): boolean {
@@ -258,47 +253,25 @@ function hasDeclarativeMethodLikeTopLevel(statements: readonly ts.Statement[]): 
 }
 
 function statementContainsDeclarativeMethodLike(statement: ts.Statement): boolean {
-  if (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) {
+  if (isDeclarativeTypeStatement(statement)) {
     return true;
   }
-  if (ts.isVariableStatement(statement)) {
-    return statement.declarationList.declarations.some((declaration) =>
-      declaration.initializer ? initializerContainsMethodLike(declaration.initializer) : false
-    );
-  }
-  if (ts.isExpressionStatement(statement) && ts.isBinaryExpression(statement.expression)) {
-    return initializerContainsMethodLike(statement.expression.right);
-  }
-  return false;
+  return variableStatementContainsMethodLike(statement) || assignmentStatementContainsMethodLike(statement);
 }
 
 function initializerContainsMethodLike(expression: ts.Expression): boolean {
   const unwrapped = unwrapParentheses(expression);
-  if (ts.isFunctionExpression(unwrapped) || ts.isArrowFunction(unwrapped) || ts.isClassExpression(unwrapped)) {
+  if (isDeclarativeInitializer(unwrapped)) {
     return true;
   }
-  if (ts.isObjectLiteralExpression(unwrapped)) {
-    return unwrapped.properties.some((property) =>
-      ts.isMethodDeclaration(property)
-      || (ts.isPropertyAssignment(property) && initializerContainsMethodLike(property.initializer))
-    );
-  }
-  return false;
+  return ts.isObjectLiteralExpression(unwrapped) && unwrapped.properties.some(isMethodLikeObjectProperty);
 }
 
 function isDeclarativeTopLevelStatement(statement: ts.Statement): boolean {
-  if (
-    ts.isFunctionDeclaration(statement) ||
-    ts.isClassDeclaration(statement) ||
-    ts.isVariableStatement(statement) ||
-    ts.isEmptyStatement(statement)
-  ) {
+  if (isAlwaysDeclarativeStatement(statement)) {
     return true;
   }
-  return ts.isExpressionStatement(statement)
-    && ts.isBinaryExpression(statement.expression)
-    && statement.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken
-    && initializerContainsMethodLike(statement.expression.right);
+  return assignmentStatementContainsMethodLike(statement);
 }
 
 function inferAnonymousDefaultName(node: ts.FunctionDeclaration): string | null {
@@ -406,14 +379,9 @@ function assignedNameFromBinaryExpression(
 function findContainerName(node: ts.Node): string | null {
   let current: ts.Node | undefined = node.parent;
   while (current) {
-    if ((ts.isClassDeclaration(current) || ts.isClassExpression(current)) && current.name) {
-      return current.name.text;
-    }
-    if (ts.isObjectLiteralExpression(current)) {
-      const inferred = inferObjectContainerName(current);
-      if (inferred) {
-        return inferred;
-      }
+    const containerName = containerNameFromNode(current);
+    if (containerName) {
+      return containerName;
     }
     current = current.parent;
   }
@@ -461,7 +429,7 @@ function containerFromPropertyDeclaration(parent: ts.Node): string | null {
 }
 
 function containerFromBinaryAssignment(parent: ts.Node): string | null {
-  if (!ts.isBinaryExpression(parent) || parent.operatorToken.kind !== ts.SyntaxKind.EqualsToken) {
+  if (!isAssignmentBinaryExpression(parent)) {
     return null;
   }
   const target = assignmentTarget(parent.left);
@@ -469,28 +437,13 @@ function containerFromBinaryAssignment(parent: ts.Node): string | null {
 }
 
 function assignmentTarget(node: ts.Expression): { name: string; containerName: string | null } {
-  if (ts.isIdentifier(node)) {
-    return {
-      name: node.text,
-      containerName: null
-    };
+  for (const resolver of ASSIGNMENT_TARGET_RESOLVERS) {
+    const target = resolver(node);
+    if (target) {
+      return target;
+    }
   }
-  if (ts.isPropertyAccessExpression(node)) {
-    return {
-      name: node.name.text,
-      containerName: node.expression.getText()
-    };
-  }
-  if (ts.isElementAccessExpression(node)) {
-    return {
-      name: `[${node.argumentExpression?.getText() ?? ""}]`,
-      containerName: node.expression.getText()
-    };
-  }
-  return {
-    name: "<assigned>",
-    containerName: null
-  };
+  return createAssignmentTarget("<assigned>", null);
 }
 
 function propertyName(name: ts.PropertyName): string {
@@ -535,4 +488,87 @@ function normalizeFilePath(filePath: string): string {
 
 function uniqueStrings(values: string[]): string[] {
   return Array.from(new Set(values));
+}
+
+type DeclarativeWrapper = (ts.FunctionExpression | ts.ArrowFunction) & { body: ts.Block };
+
+function isTopLevelDeclarativeWrapper(node: ts.Node): node is DeclarativeWrapper {
+  return (ts.isFunctionExpression(node) || ts.isArrowFunction(node))
+    && ts.isBlock(node.body)
+    && !hasEnclosingFunction(node);
+}
+
+function isDeclarativeTypeStatement(statement: ts.Statement): boolean {
+  return ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement);
+}
+
+function variableStatementContainsMethodLike(statement: ts.Statement): boolean {
+  return ts.isVariableStatement(statement)
+    && statement.declarationList.declarations.some((declaration) =>
+      declaration.initializer ? initializerContainsMethodLike(declaration.initializer) : false
+    );
+}
+
+function assignmentStatementContainsMethodLike(statement: ts.Statement): boolean {
+  return ts.isExpressionStatement(statement)
+    && isAssignmentBinaryExpression(statement.expression)
+    && initializerContainsMethodLike(statement.expression.right);
+}
+
+function isDeclarativeInitializer(expression: ts.Expression): boolean {
+  return ts.isFunctionExpression(expression) || ts.isArrowFunction(expression) || ts.isClassExpression(expression);
+}
+
+function isAlwaysDeclarativeStatement(statement: ts.Statement): boolean {
+  return isDeclarativeTypeStatement(statement) || ts.isVariableStatement(statement) || ts.isEmptyStatement(statement);
+}
+
+function containerNameFromNode(node: ts.Node): string | null {
+  if ((ts.isClassDeclaration(node) || ts.isClassExpression(node)) && node.name) {
+    return node.name.text;
+  }
+  return ts.isObjectLiteralExpression(node) ? inferObjectContainerName(node) : null;
+}
+
+function isAssignmentBinaryExpression(node: ts.Node): node is ts.BinaryExpression {
+  return ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken;
+}
+
+function createAssignmentTarget(name: string, containerName: string | null): { name: string; containerName: string | null } {
+  return { name, containerName };
+}
+
+type AssignmentTargetResolver = (node: ts.Expression) => { name: string; containerName: string | null } | null;
+
+const ASSIGNMENT_TARGET_RESOLVERS: AssignmentTargetResolver[] = [
+  assignmentTargetFromIdentifier,
+  assignmentTargetFromPropertyAccess,
+  assignmentTargetFromElementAccess
+];
+
+function assignmentTargetFromIdentifier(node: ts.Expression): { name: string; containerName: string | null } | null {
+  return ts.isIdentifier(node) ? createAssignmentTarget(node.text, null) : null;
+}
+
+function assignmentTargetFromPropertyAccess(node: ts.Expression): { name: string; containerName: string | null } | null {
+  return ts.isPropertyAccessExpression(node)
+    ? createAssignmentTarget(node.name.text, node.expression.getText())
+    : null;
+}
+
+function assignmentTargetFromElementAccess(node: ts.Expression): { name: string; containerName: string | null } | null {
+  return ts.isElementAccessExpression(node)
+    ? createAssignmentTarget(`[${node.argumentExpression?.getText() ?? ""}]`, node.expression.getText())
+    : null;
+}
+
+function isMethodLikeObjectProperty(property: ts.ObjectLiteralElementLike): boolean {
+  if (ts.isMethodDeclaration(property)) {
+    return true;
+  }
+  return isMethodLikePropertyAssignment(property);
+}
+
+function isMethodLikePropertyAssignment(property: ts.ObjectLiteralElementLike): boolean {
+  return ts.isPropertyAssignment(property) && initializerContainsMethodLike(property.initializer);
 }

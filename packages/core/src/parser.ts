@@ -18,61 +18,13 @@ export async function analyzeTypeScriptFiles(filePaths: string[]): Promise<Parse
     return [];
   }
 
-  const program = ts.createProgram({
-    rootNames: resolvedFiles,
-    options: {
-      allowJs: false,
-      checkJs: false,
-      jsx: ts.JsxEmit.Preserve,
-      module: ts.ModuleKind.Node16,
-      moduleResolution: ts.ModuleResolutionKind.Node16,
-      noEmit: true,
-      resolveJsonModule: true,
-      skipLibCheck: true,
-      target: ts.ScriptTarget.ES2022
-    }
-  });
-  const checker = program.getTypeChecker();
   const selectedFiles = new Set(resolvedFiles.map(normalizeFilePath));
-
-  for (const sourceFile of program.getSourceFiles()) {
-    if (!selectedFiles.has(normalizeFilePath(sourceFile.fileName))) {
-      continue;
-    }
-    const diagnostics = program.getSyntacticDiagnostics(sourceFile);
-    if (diagnostics.length > 0) {
-      throw new Error(formatDiagnostics(diagnostics));
-    }
-  }
-
-  const methods: InternalMethod[] = [];
-  for (const sourceFile of program.getSourceFiles()) {
-    if (!selectedFiles.has(normalizeFilePath(sourceFile.fileName))) {
-      continue;
-    }
-    methods.push(...collectMethodsFromSourceFile(sourceFile, checker));
-  }
-
+  const program = createTypeScriptProgram(resolvedFiles);
+  const selectedSourceFiles = selectProgramSourceFiles(program, selectedFiles);
+  ensureSelectedFilesParse(program, selectedSourceFiles);
+  const methods = collectSelectedMethods(program, selectedSourceFiles);
   const recursiveIds = recursiveMethodIds(methods);
-  const methodsByFile = new Map<string, MethodDescriptor[]>();
-  for (const method of methods) {
-    const descriptors = methodsByFile.get(method.filePath) ?? [];
-    descriptors.push({
-      functionName: method.functionName,
-      containerName: method.containerName,
-      displayName: method.displayName,
-      startLine: method.startLine,
-      endLine: method.endLine,
-      bodySpan: method.bodySpan,
-      cognitiveComplexity: method.baseCognitiveComplexity + (recursiveIds.has(method.id) ? 1 : 0)
-    });
-    methodsByFile.set(method.filePath, descriptors);
-  }
-
-  return resolvedFiles.map((filePath) => ({
-    filePath,
-    methods: sortDescriptors(methodsByFile.get(filePath) ?? [])
-  }));
+  return buildParsedFileMethods(resolvedFiles, methods, recursiveIds);
 }
 
 function recursiveMethodIds(methods: InternalMethod[]): Set<string> {
@@ -174,41 +126,11 @@ function stronglyConnectedRecursiveMembers(
     stack.push(node);
     onStack.add(node);
 
-    for (const target of edges.get(node) ?? []) {
-      if (!methodsById.has(target)) {
-        continue;
-      }
-      if (!indexByNode.has(target)) {
-        strongConnect(target);
-        lowLinkByNode.set(node, Math.min(lowLinkByNode.get(node)!, lowLinkByNode.get(target)!));
-      } else if (onStack.has(target)) {
-        lowLinkByNode.set(node, Math.min(lowLinkByNode.get(node)!, indexByNode.get(target)!));
-      }
-    }
-
-    if (lowLinkByNode.get(node) !== indexByNode.get(node)) {
+    visitRecursiveTargets(node, edges, methodsById, strongConnect, indexByNode, lowLinkByNode, onStack);
+    if (!isComponentRoot(node, indexByNode, lowLinkByNode)) {
       return;
     }
-
-    const component: string[] = [];
-    let member = "";
-    do {
-      member = stack.pop()!;
-      onStack.delete(member);
-      component.push(member);
-    } while (member !== node);
-
-    if (component.length > 1) {
-      component.forEach((componentMember) => {
-        recursiveMembers.add(componentMember);
-      });
-      return;
-    }
-
-    const singleton = component[0];
-    if (edges.get(singleton)?.has(singleton)) {
-      recursiveMembers.add(singleton);
-    }
+    markRecursiveComponent(popComponent(node, stack, onStack), edges, recursiveMembers);
   };
 
   for (const node of edges.keys()) {
@@ -249,6 +171,157 @@ function nameKey(name: string, arity: number): string {
 
 function ownerAndNameKey(ownerName: string, name: string, arity: number): string {
   return `${ownerName}:${name}:${arity}`;
+}
+
+function createTypeScriptProgram(rootNames: string[]): ts.Program {
+  return ts.createProgram({
+    rootNames,
+    options: {
+      allowJs: false,
+      checkJs: false,
+      jsx: ts.JsxEmit.Preserve,
+      module: ts.ModuleKind.Node16,
+      moduleResolution: ts.ModuleResolutionKind.Node16,
+      noEmit: true,
+      resolveJsonModule: true,
+      skipLibCheck: true,
+      target: ts.ScriptTarget.ES2022
+    }
+  });
+}
+
+function selectProgramSourceFiles(program: ts.Program, selectedFiles: Set<string>): ts.SourceFile[] {
+  return program.getSourceFiles().filter((sourceFile) => selectedFiles.has(normalizeFilePath(sourceFile.fileName)));
+}
+
+function ensureSelectedFilesParse(program: ts.Program, sourceFiles: ts.SourceFile[]): void {
+  for (const sourceFile of sourceFiles) {
+    const diagnostics = program.getSyntacticDiagnostics(sourceFile);
+    if (diagnostics.length > 0) {
+      throw new Error(formatDiagnostics(diagnostics));
+    }
+  }
+}
+
+function collectSelectedMethods(program: ts.Program, sourceFiles: ts.SourceFile[]): InternalMethod[] {
+  const checker = program.getTypeChecker();
+  const methods: InternalMethod[] = [];
+  for (const sourceFile of sourceFiles) {
+    methods.push(...collectMethodsFromSourceFile(sourceFile, checker));
+  }
+  return methods;
+}
+
+function buildParsedFileMethods(
+  resolvedFiles: string[],
+  methods: InternalMethod[],
+  recursiveIds: Set<string>
+): ParsedFileMethods[] {
+  const methodsByFile = new Map<string, MethodDescriptor[]>();
+  for (const method of methods) {
+    const descriptors = methodsByFile.get(method.filePath) ?? [];
+    descriptors.push(toMethodDescriptor(method, recursiveIds));
+    methodsByFile.set(method.filePath, descriptors);
+  }
+  return resolvedFiles.map((filePath) => ({
+    filePath,
+    methods: sortDescriptors(methodsByFile.get(filePath) ?? [])
+  }));
+}
+
+function toMethodDescriptor(method: InternalMethod, recursiveIds: Set<string>): MethodDescriptor {
+  return {
+    functionName: method.functionName,
+    containerName: method.containerName,
+    displayName: method.displayName,
+    startLine: method.startLine,
+    endLine: method.endLine,
+    bodySpan: method.bodySpan,
+    cognitiveComplexity: method.baseCognitiveComplexity + (recursiveIds.has(method.id) ? 1 : 0)
+  };
+}
+
+function visitRecursiveTargets(
+  node: string,
+  edges: Map<string, Set<string>>,
+  methodsById: Map<string, InternalMethod>,
+  strongConnect: (node: string) => void,
+  indexByNode: Map<string, number>,
+  lowLinkByNode: Map<string, number>,
+  onStack: Set<string>
+): void {
+  for (const target of edges.get(node) ?? []) {
+    if (!methodsById.has(target)) {
+      continue;
+    }
+    if (visitUnseenTarget(node, target, strongConnect, indexByNode, lowLinkByNode)) {
+      continue;
+    }
+    updateLowLinkFromStackTarget(node, target, indexByNode, lowLinkByNode, onStack);
+  }
+}
+
+function visitUnseenTarget(
+  node: string,
+  target: string,
+  strongConnect: (node: string) => void,
+  indexByNode: Map<string, number>,
+  lowLinkByNode: Map<string, number>
+): boolean {
+  if (indexByNode.has(target)) {
+    return false;
+  }
+  strongConnect(target);
+  lowLinkByNode.set(node, Math.min(lowLinkByNode.get(node)!, lowLinkByNode.get(target)!));
+  return true;
+}
+
+function updateLowLinkFromStackTarget(
+  node: string,
+  target: string,
+  indexByNode: Map<string, number>,
+  lowLinkByNode: Map<string, number>,
+  onStack: Set<string>
+): void {
+  if (!onStack.has(target)) {
+    return;
+  }
+  lowLinkByNode.set(node, Math.min(lowLinkByNode.get(node)!, indexByNode.get(target)!));
+}
+
+function isComponentRoot(
+  node: string,
+  indexByNode: Map<string, number>,
+  lowLinkByNode: Map<string, number>
+): boolean {
+  return lowLinkByNode.get(node) === indexByNode.get(node);
+}
+
+function popComponent(node: string, stack: string[], onStack: Set<string>): string[] {
+  const component: string[] = [];
+  let member = "";
+  do {
+    member = stack.pop()!;
+    onStack.delete(member);
+    component.push(member);
+  } while (member !== node);
+  return component;
+}
+
+function markRecursiveComponent(
+  component: string[],
+  edges: Map<string, Set<string>>,
+  recursiveMembers: Set<string>
+): void {
+  if (component.length > 1) {
+    component.forEach((member) => {
+      recursiveMembers.add(member);
+    });
+    return;
+  }
+  if (edges.get(component[0])?.has(component[0])) {
+    recursiveMembers.add(component[0]);
+  }
 }
 
 function formatDiagnostics(diagnostics: readonly ts.Diagnostic[]): string {

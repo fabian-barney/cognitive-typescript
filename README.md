@@ -25,10 +25,12 @@ npm ci
 npm run build
 npm test
 npm run cognitive-typescript-check
+npm run crap-typescript-check
 npm pack --workspaces
 ```
 
 `npm run cognitive-typescript-check` runs the repository through its own Cognitive Complexity gate for the published package sources under `packages/`.
+`npm run crap-typescript-check` runs the repository through a CRAP gate using the published Vitest adapter for the package sources under `packages/`.
 
 ## Install
 

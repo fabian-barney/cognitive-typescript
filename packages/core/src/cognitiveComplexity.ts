@@ -41,25 +41,11 @@ export function analyzeFunctionBody(
 
   const scanLogicalExpression = (node: ts.Expression, nesting: number, previousOperator: LogicalOperator): void => {
     const expression = unwrapParentheses(node);
-    if (ts.isPrefixUnaryExpression(expression) && expression.operator === ts.SyntaxKind.ExclamationToken) {
-      scanLogicalExpression(expression.operand, nesting, null);
+    if (scanNegatedLogicalExpression(expression, nesting)) {
       return;
     }
-    if (ts.isBinaryExpression(expression)) {
-      const operator = logicalOperator(expression.operatorToken.kind);
-      if (operator === "??") {
-        scan(expression.left, nesting);
-        scan(expression.right, nesting);
-        return;
-      }
-      if (operator) {
-        if (previousOperator !== operator) {
-          addFundamental();
-        }
-        scanLogicalExpression(expression.left, nesting, operator);
-        scanLogicalExpression(expression.right, nesting, operator);
-        return;
-      }
+    if (scanLogicalBinaryExpression(expression, nesting, previousOperator)) {
+      return;
     }
     scan(expression, nesting);
   };
@@ -211,6 +197,63 @@ export function analyzeFunctionBody(
     return false;
   };
 
+  const scanNegatedLogicalExpression = (expression: ts.Expression, nesting: number): boolean => {
+    if (!(ts.isPrefixUnaryExpression(expression) && expression.operator === ts.SyntaxKind.ExclamationToken)) {
+      return false;
+    }
+    scanLogicalExpression(expression.operand, nesting, null);
+    return true;
+  };
+
+  const scanLogicalBinaryExpression = (
+    expression: ts.Expression,
+    nesting: number,
+    previousOperator: LogicalOperator
+  ): boolean => {
+    if (!ts.isBinaryExpression(expression)) {
+      return false;
+    }
+    const operator = logicalOperator(expression.operatorToken.kind);
+    if (!operator) {
+      return false;
+    }
+    return handleTrackedLogicalOperator(expression, nesting, previousOperator, operator);
+  };
+
+  const handleTrackedLogicalOperator = (
+    expression: ts.BinaryExpression,
+    nesting: number,
+    previousOperator: LogicalOperator,
+    operator: "&&" | "||" | "??"
+  ): boolean => {
+    if (operator === "??") {
+      scan(expression.left, nesting);
+      scan(expression.right, nesting);
+      return true;
+    }
+    if (previousOperator !== operator) {
+      addFundamental();
+    }
+    scanLogicalExpression(expression.left, nesting, operator);
+    scanLogicalExpression(expression.right, nesting, operator);
+    return true;
+  };
+
+  const nodeHandlers = [
+    handleIfStatement,
+    handleForStatement,
+    handleForEachStatement,
+    handleWhileStatement,
+    handleDoStatement,
+    handleCaseBlock,
+    handleSwitchStatement,
+    handleCatchClause,
+    handleConditionalExpression,
+    handleJumpStatement,
+    handleCallExpression,
+    handleLogicalBinaryExpression
+  ];
+
   const scan = (node: ts.Node | undefined, nesting: number): void => {
     if (!node) {
       return;
@@ -218,41 +261,10 @@ export function analyzeFunctionBody(
     if (node !== root && isNestedFunctionLike(node)) {
       return;
     }
-    if (handleIfStatement(node, nesting)) {
-      return;
-    }
-    if (handleForStatement(node, nesting)) {
-      return;
-    }
-    if (handleForEachStatement(node, nesting)) {
-      return;
-    }
-    if (handleWhileStatement(node, nesting)) {
-      return;
-    }
-    if (handleDoStatement(node, nesting)) {
-      return;
-    }
-    if (handleCaseBlock(node, nesting)) {
-      return;
-    }
-    if (handleSwitchStatement(node, nesting)) {
-      return;
-    }
-    if (handleCatchClause(node, nesting)) {
-      return;
-    }
-    if (handleConditionalExpression(node, nesting)) {
-      return;
-    }
-    if (handleJumpStatement(node)) {
-      return;
-    }
-    if (handleCallExpression(node, nesting)) {
-      return;
-    }
-    if (handleLogicalBinaryExpression(node, nesting)) {
-      return;
+    for (const handler of nodeHandlers) {
+      if (handler(node, nesting)) {
+        return;
+      }
     }
     ts.forEachChild(node, (child) => {
       scan(child, nesting);
@@ -264,16 +276,7 @@ export function analyzeFunctionBody(
 }
 
 function resolveCallSymbol(expression: ts.Expression, checker: ts.TypeChecker): ts.Symbol | null {
-  if (ts.isIdentifier(expression)) {
-    return resolveSymbol(expression, checker);
-  }
-  if (ts.isPropertyAccessExpression(expression)) {
-    return resolveSymbol(expression.name, checker);
-  }
-  if (ts.isElementAccessExpression(expression) && expression.argumentExpression) {
-    return resolveSymbol(expression.argumentExpression, checker);
-  }
-  return resolveSymbol(expression, checker);
+  return resolveSymbol(symbolLookupNode(expression), checker);
 }
 
 function resolveSymbol(node: ts.Node, checker: ts.TypeChecker): ts.Symbol | null {
@@ -340,14 +343,8 @@ function isIgnoredJsxLogicalChain(node: ts.BinaryExpression): boolean {
   if (!isLogicalBinary(node)) {
     return false;
   }
-  let current: ts.Node = node;
-  while (ts.isBinaryExpression(current.parent) && isLogicalBinary(current.parent)) {
-    current = current.parent;
-  }
-  if (!hasJsxExpressionAncestor(current)) {
-    return false;
-  }
-  return isJsxLikeNode(rightmostLogicalOperand(current as ts.BinaryExpression));
+  const topmost = topmostLogicalExpression(node);
+  return hasJsxExpressionAncestor(topmost) && isJsxLikeNode(rightmostLogicalOperand(topmost));
 }
 
 function isLogicalBinary(node: ts.Node): node is ts.BinaryExpression {
@@ -380,6 +377,24 @@ function rightmostLogicalOperand(node: ts.BinaryExpression): ts.Node {
 
 function isJsxLikeNode(node: ts.Node): boolean {
   return ts.isJsxElement(node) || ts.isJsxFragment(node) || ts.isJsxSelfClosingElement(node);
+}
+
+function symbolLookupNode(expression: ts.Expression): ts.Node {
+  if (ts.isPropertyAccessExpression(expression)) {
+    return expression.name;
+  }
+  if (ts.isElementAccessExpression(expression) && expression.argumentExpression) {
+    return expression.argumentExpression;
+  }
+  return expression;
+}
+
+function topmostLogicalExpression(node: ts.BinaryExpression): ts.BinaryExpression {
+  let current = node;
+  while (ts.isBinaryExpression(current.parent) && isLogicalBinary(current.parent)) {
+    current = current.parent;
+  }
+  return current;
 }
 
 function unwrapParentheses<T extends ts.Node>(node: T): T {
