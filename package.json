@@ -29,7 +29,7 @@
     "verify-release-version": "node ./scripts/verify-release-version.mjs"
   },
   "devDependencies": {
-    "@barney-media/crap-typescript-vitest": "^0.2.1",
+    "@barney-media/crap-typescript-vitest": "^0.2.2",
     "@types/node": "^25.5.1",
     "@vitest/coverage-v8": "^4.1.2",
     "jest": "^30.3.0",

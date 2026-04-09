@@ -105,6 +105,36 @@ export default function () {
       'registry["upper"]': 1
     });
   });
+
+  it("marks identifier and element-access self calls as recursive", async () => {
+    const projectRoot = await createTempDir("cognitive-parser-");
+    tempDirs.push(projectRoot);
+    const filePath = path.join(projectRoot, "sample.ts");
+    await writeProjectFiles(projectRoot, {
+      "sample.ts": `export function recurse(flag: boolean): number {
+  if (flag) {
+    return recurse(false);
+  }
+  return 0;
+}
+
+export const registry = {
+  ["recurse"](flag: boolean): number {
+    if (flag) {
+      return registry["recurse"](false);
+    }
+    return 0;
+  }
+};
+`
+    });
+
+    const methods = await parseFileMethods(filePath);
+    expect(toComplexityMap(methods)).toEqual({
+      recurse: 2,
+      'registry["recurse"]': 2
+    });
+  });
 });
 
 function toComplexityMap(methods: Awaited<ReturnType<typeof parseFileMethods>>): Record<string, number> {

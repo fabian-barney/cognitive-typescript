@@ -72,40 +72,50 @@ function resolveCallTargets(
   methodsByName: Map<string, Set<string>>,
   methodsByOwnerAndName: Map<string, Set<string>>
 ): Set<string> {
-  if (call.symbol) {
-    const direct = methodsBySymbol.get(call.symbol);
-    if (direct) {
-      return direct;
-    }
-  }
+  return resolveDirectCallTargets(call, methodsBySymbol)
+    ?? resolveOwnerCallTargets(call, methodsByOwnerAndName)
+    ?? resolveNamedCallTargets(call, method, methodsByName)
+    ?? new Set();
+}
 
-  if (call.name && call.ownerName) {
-    const ownerMatches = methodsByOwnerAndName.get(ownerAndNameKey(call.ownerName, call.name, call.arity));
-    if (ownerMatches?.size) {
-      return ownerMatches;
-    }
-  }
+function resolveDirectCallTargets(
+  call: InternalMethod["calls"][number],
+  methodsBySymbol: Map<ts.Symbol, Set<string>>
+): Set<string> | null {
+  return call.symbol ? methodsBySymbol.get(call.symbol) ?? null : null;
+}
 
+function resolveOwnerCallTargets(
+  call: InternalMethod["calls"][number],
+  methodsByOwnerAndName: Map<string, Set<string>>
+): Set<string> | null {
+  if (!(call.name && call.ownerName)) {
+    return null;
+  }
+  const ownerMatches = methodsByOwnerAndName.get(ownerAndNameKey(call.ownerName, call.name, call.arity));
+  return ownerMatches?.size ? ownerMatches : null;
+}
+
+function resolveNamedCallTargets(
+  call: InternalMethod["calls"][number],
+  method: InternalMethod,
+  methodsByName: Map<string, Set<string>>
+): Set<string> | null {
   if (!call.name) {
-    return new Set();
+    return null;
   }
+  return selectNamedCallTargets(methodsByName.get(nameKey(call.name, call.arity)), method.id);
+}
 
-  const selfMatches = new Set<string>();
-  for (const candidate of methodsByName.get(nameKey(call.name, call.arity)) ?? []) {
-    if (candidate === method.id) {
-      selfMatches.add(candidate);
-    }
+function selectNamedCallTargets(globalMatches: Set<string> | undefined, methodId: string): Set<string> | null {
+  if (globalMatches?.has(methodId)) {
+    return new Set([methodId]);
   }
-  if (selfMatches.size > 0) {
-    return selfMatches;
-  }
+  return selectSingleNamedCallTarget(globalMatches);
+}
 
-  const globalMatches = methodsByName.get(nameKey(call.name, call.arity));
-  if (globalMatches?.size === 1) {
-    return globalMatches;
-  }
-
-  return new Set();
+function selectSingleNamedCallTarget(globalMatches: Set<string> | undefined): Set<string> | null {
+  return globalMatches?.size === 1 ? globalMatches : null;
 }
 
 function stronglyConnectedRecursiveMembers(
@@ -250,15 +260,29 @@ function visitRecursiveTargets(
   lowLinkByNode: Map<string, number>,
   onStack: Set<string>
 ): void {
-  for (const target of edges.get(node) ?? []) {
-    if (!methodsById.has(target)) {
-      continue;
-    }
-    if (visitUnseenTarget(node, target, strongConnect, indexByNode, lowLinkByNode)) {
-      continue;
-    }
-    updateLowLinkFromStackTarget(node, target, indexByNode, lowLinkByNode, onStack);
+  const targets = edges.get(node);
+  if (!targets) {
+    return;
   }
+  for (const target of targets) {
+    if (methodsById.has(target)) {
+      visitResolvedTarget(node, target, strongConnect, indexByNode, lowLinkByNode, onStack);
+    }
+  }
+}
+
+function visitResolvedTarget(
+  node: string,
+  target: string,
+  strongConnect: (node: string) => void,
+  indexByNode: Map<string, number>,
+  lowLinkByNode: Map<string, number>,
+  onStack: Set<string>
+): void {
+  if (visitUnseenTarget(node, target, strongConnect, indexByNode, lowLinkByNode)) {
+    return;
+  }
+  updateLowLinkFromStackTarget(node, target, indexByNode, lowLinkByNode, onStack);
 }
 
 function visitUnseenTarget(

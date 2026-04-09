@@ -295,28 +295,45 @@ function fallbackCallTarget(
   sourceFile: ts.SourceFile,
   containerName: string | null
 ): Pick<CallTarget, "name" | "ownerName"> {
-  if (ts.isIdentifier(expression)) {
-    return {
-      name: expression.text,
-      ownerName: null
-    };
-  }
-  if (ts.isPropertyAccessExpression(expression)) {
-    return {
-      name: expression.name.text,
-      ownerName: ownerText(expression.expression, sourceFile, containerName)
-    };
-  }
-  if (ts.isElementAccessExpression(expression) && expression.argumentExpression) {
-    return {
-      name: `[${expression.argumentExpression.getText(sourceFile)}]`,
-      ownerName: ownerText(expression.expression, sourceFile, containerName)
-    };
-  }
-  return {
-    name: null,
-    ownerName: null
-  };
+  return resolveIdentifierCallTarget(expression)
+    ?? resolvePropertyAccessCallTarget(expression, sourceFile, containerName)
+    ?? resolveElementAccessCallTarget(expression, sourceFile, containerName)
+    ?? { name: null, ownerName: null };
+}
+
+function resolveIdentifierCallTarget(expression: ts.Expression): Pick<CallTarget, "name" | "ownerName"> | null {
+  return ts.isIdentifier(expression)
+    ? {
+        name: expression.text,
+        ownerName: null
+      }
+    : null;
+}
+
+function resolvePropertyAccessCallTarget(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  containerName: string | null
+): Pick<CallTarget, "name" | "ownerName"> | null {
+  return ts.isPropertyAccessExpression(expression)
+    ? {
+        name: expression.name.text,
+        ownerName: ownerText(expression.expression, sourceFile, containerName)
+      }
+    : null;
+}
+
+function resolveElementAccessCallTarget(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  containerName: string | null
+): Pick<CallTarget, "name" | "ownerName"> | null {
+  return ts.isElementAccessExpression(expression) && expression.argumentExpression
+    ? {
+        name: `[${expression.argumentExpression.getText(sourceFile)}]`,
+        ownerName: ownerText(expression.expression, sourceFile, containerName)
+      }
+    : null;
 }
 
 function ownerText(expression: ts.Expression, sourceFile: ts.SourceFile, containerName: string | null): string | null {
