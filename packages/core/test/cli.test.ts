@@ -46,7 +46,7 @@ describe("cli", () => {
 
     expect(exitCode).toBe(2);
     expect(stdout.toString()).toContain("tooComplex");
-    expect(stderr.toString()).toContain("Cognitive Complexity threshold exceeded: 28 > 25");
+    expect(stderr.toString()).toContain("Cognitive Complexity threshold exceeded: 28 > 15");
   });
 });
 

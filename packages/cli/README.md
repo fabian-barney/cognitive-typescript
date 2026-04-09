@@ -31,7 +31,7 @@ npx cognitive-typescript packages/api packages/web
 
 - `0` success, threshold respected
 - `1` invalid CLI usage or execution failure
-- `2` Cognitive Complexity threshold exceeded (`> 25`)
+- `2` Cognitive Complexity threshold exceeded (`> 15`)
 
 See the [main repository](https://github.com/fabian-barney/cognitive-typescript) for full details.
 

@@ -2,7 +2,7 @@
 
 `cognitive-typescript` is a shared Cognitive Complexity toolkit for TypeScript projects.
 
-It performs pure static analysis using the Sonar Cognitive Complexity white paper as the metric source of truth, reports the worst function-like bodies first, and fails when any analyzed function exceeds the fixed threshold of `25`.
+It performs pure static analysis using the Sonar Cognitive Complexity white paper as the metric source of truth, reports the worst function-like bodies first, and fails when any analyzed function exceeds the fixed threshold of `15`.
 
 ## Modules
 
@@ -16,7 +16,7 @@ It performs pure static analysis using the Sonar Cognitive Complexity white pape
 - The implementation follows the SonarSource Cognitive Complexity white paper.
 - It is pure static analysis.
 - It does not read coverage reports or execute tests as part of the analysis itself.
-- The threshold is fixed at `25`.
+- The threshold is fixed at `15`.
 
 ## Build and Test
 
@@ -74,7 +74,7 @@ npx cognitive-typescript
 
 - `0` success, threshold respected
 - `1` invalid CLI usage or execution failure
-- `2` Cognitive Complexity threshold exceeded (`> 25`)
+- `2` Cognitive Complexity threshold exceeded (`> 15`)
 
 ## Compatibility Matrix
 
