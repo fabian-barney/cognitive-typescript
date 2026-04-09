@@ -54,32 +54,14 @@ export async function runCli(
     return parsed;
   }
   if (parsed.mode === "help") {
-    writeLine(stdout, usage());
-    return 0;
+    return writeHelp(stdout);
   }
 
   const result = await analyzeCliProject(parsed, projectRoot, stderr);
   if (!result) {
     return 1;
   }
-  if (result.selectedFiles.length === 0) {
-    writeLine(stdout, NO_FILES_MESSAGE);
-    return 0;
-  }
-  if (result.metrics.length === 0) {
-    writeLine(stdout, NO_ANALYZABLE_FUNCTIONS_MESSAGE);
-    return 0;
-  }
-
-  writeLine(stdout, formatReport(result.metrics));
-  if (!result.thresholdExceeded) {
-    return 0;
-  }
-  writeLine(
-    stderr,
-    `Cognitive Complexity threshold exceeded: ${result.maxCognitiveComplexity} > ${COGNITIVE_COMPLEXITY_THRESHOLD}`
-  );
-  return 2;
+  return handleCliResult(result, stdout, stderr);
 }
 
 function parseCliInputs(args: string[], stdout: Writer, stderr: Writer): CliArguments | number {
@@ -107,6 +89,47 @@ async function analyzeCliProject(
     writeLine(stderr, (error as Error).message);
     return null;
   }
+}
+
+function writeHelp(stdout: Writer): number {
+  writeLine(stdout, usage());
+  return 0;
+}
+
+function handleCliResult(
+  result: Awaited<ReturnType<typeof analyzeProject>>,
+  stdout: Writer,
+  stderr: Writer
+): number {
+  const earlyExit = resolveCliEarlyExit(result, stdout);
+  if (earlyExit !== null) {
+    return earlyExit;
+  }
+  writeLine(stdout, formatReport(result.metrics));
+  return writeThresholdStatus(result, stderr);
+}
+
+function resolveCliEarlyExit(result: Awaited<ReturnType<typeof analyzeProject>>, stdout: Writer): number | null {
+  if (result.selectedFiles.length === 0) {
+    writeLine(stdout, NO_FILES_MESSAGE);
+    return 0;
+  }
+  if (result.metrics.length === 0) {
+    writeLine(stdout, NO_ANALYZABLE_FUNCTIONS_MESSAGE);
+    return 0;
+  }
+  return null;
+}
+
+function writeThresholdStatus(result: Awaited<ReturnType<typeof analyzeProject>>, stderr: Writer): number {
+  if (!result.thresholdExceeded) {
+    return 0;
+  }
+  writeLine(
+    stderr,
+    `Cognitive Complexity threshold exceeded: ${result.maxCognitiveComplexity} > ${COGNITIVE_COMPLEXITY_THRESHOLD}`
+  );
+  return 2;
 }
 
 interface CliParseState {

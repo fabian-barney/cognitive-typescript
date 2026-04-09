@@ -167,16 +167,31 @@ async function walkSourceTree(
   for (const entry of entries) {
     const absolutePath = path.join(currentDir, entry.name);
     if (entry.isDirectory()) {
-      if (IGNORED_DIRECTORIES.has(entry.name)) {
-        continue;
-      }
-      await walkSourceTree(absolutePath, onFile);
+      await walkDirectoryEntry(entry.name, absolutePath, onFile);
       continue;
     }
-    if (entry.isFile() && isAnalyzableFile(absolutePath)) {
-      await onFile(absolutePath);
+    if (entry.isFile()) {
+      await walkFileEntry(absolutePath, onFile);
     }
   }
+}
+
+async function walkDirectoryEntry(
+  entryName: string,
+  absolutePath: string,
+  onFile: (filePath: string) => Promise<void>
+): Promise<void> {
+  if (IGNORED_DIRECTORIES.has(entryName)) {
+    return;
+  }
+  await walkSourceTree(absolutePath, onFile);
+}
+
+async function walkFileEntry(absolutePath: string, onFile: (filePath: string) => Promise<void>): Promise<void> {
+  if (!isAnalyzableFile(absolutePath)) {
+    return;
+  }
+  await onFile(absolutePath);
 }
 
 async function expandDirectoryPath(directoryPath: string, files: Set<string>): Promise<void> {

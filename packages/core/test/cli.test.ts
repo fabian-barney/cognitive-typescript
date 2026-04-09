@@ -32,6 +32,28 @@ describe("cli", () => {
     expect(stderr.toString()).toBe("");
   });
 
+  it("prints usage and returns 0 for --help", async () => {
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+
+    const exitCode = await runCli(["--help"], process.cwd(), stdout, stderr);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.toString()).toContain("Usage:");
+    expect(stderr.toString()).toBe("");
+  });
+
+  it("prints the parse error and usage for invalid arguments", async () => {
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+
+    const exitCode = await runCli(["--changed", "src"], process.cwd(), stdout, stderr);
+
+    expect(exitCode).toBe(1);
+    expect(stdout.toString()).toContain("Usage:");
+    expect(stderr.toString()).toContain("--changed cannot be combined with file arguments");
+  });
+
   it("returns exit code 2 when the threshold is exceeded", async () => {
     const projectRoot = await createTempDir("cognitive-cli-");
     tempDirs.push(projectRoot);
