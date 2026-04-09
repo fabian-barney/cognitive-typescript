@@ -38,11 +38,8 @@ export async function expandExplicitPaths(
 }
 
 export async function changedTypeScriptFilesUnderSourceRoots(projectRoot: string): Promise<string[]> {
-  const result = await runCommand("git", ["status", "--porcelain", "-z"], projectRoot);
-  if (result.exitCode !== 0) {
-    throw new Error(result.stderr.trim() || "git status --porcelain failed");
-  }
-  return Array.from(collectChangedFilesFromStatus(projectRoot, result.stdout.split("\0"))).sort();
+  const entries = await readChangedFileStatusEntries(projectRoot);
+  return Array.from(collectChangedFilesFromStatus(projectRoot, entries)).sort();
 }
 
 export function isAnalyzableFile(filePath: string): boolean {
@@ -109,10 +106,7 @@ function isUnderSourceTree(projectRoot: string, filePath: string): boolean {
 }
 
 function isIncludedGitStatus(status: string): boolean {
-  if (status === "??") {
-    return true;
-  }
-  return !status.includes("D") && /[AMRCU]/.test(status);
+  return status === "??" || isIncludedTrackedStatus(status);
 }
 
 function isRenameOrCopyStatus(status: string): boolean {
@@ -125,6 +119,23 @@ function containsAny(value: string, fragments: string[]): boolean {
 
 function hasAnySuffix(value: string, suffixes: string[]): boolean {
   return suffixes.some((suffix) => value.endsWith(suffix));
+}
+
+async function readChangedFileStatusEntries(projectRoot: string): Promise<string[]> {
+  const result = await runCommand("git", ["status", "--porcelain", "-z"], projectRoot);
+  if (result.exitCode === 0) {
+    return result.stdout.split("\0");
+  }
+  throw new Error(readChangedFileStatusError(result.stderr));
+}
+
+function isIncludedTrackedStatus(status: string): boolean {
+  return !status.includes("D") && /[AMRCU]/.test(status);
+}
+
+function readChangedFileStatusError(stderr: string): string {
+  const message = stderr.trim();
+  return message || "git status --porcelain failed";
 }
 
 async function walkForSourceRoots(

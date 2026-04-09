@@ -23,12 +23,15 @@
   "scripts": {
     "build": "tsc -b packages/core packages/cli packages/vitest packages/jest",
     "cognitive-typescript-check": "npm run build && vitest run --config vitest.cognitive.config.ts",
+    "crap-typescript-check": "npm run build && vitest run --config vitest.crap.config.ts",
     "test": "npm run build && vitest run",
     "pack": "npm pack --workspaces",
     "verify-release-version": "node ./scripts/verify-release-version.mjs"
   },
   "devDependencies": {
+    "@barney-media/crap-typescript-vitest": "^0.2.1",
     "@types/node": "^25.5.1",
+    "@vitest/coverage-v8": "^4.1.2",
     "jest": "^30.3.0",
     "ts-jest": "^29.4.9",
     "typescript": "^6.0.2",
