@@ -8,6 +8,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - No unreleased changes.
 
+## [0.1.1] - 2026-04-10
+
+### Changed
+
+- Switched npm publishing to pure Trusted Publishing.
+- Removed token-based publish configuration after npm Trusted Publisher setup.
+
 ## [0.1.0] - 2026-04-10
 
 ### Added

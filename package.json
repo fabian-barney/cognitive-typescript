@@ -1,7 +1,7 @@
 {
   "name": "cognitive-typescript-parent",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Cognitive Complexity metrics for TypeScript",
   "license": "Apache-2.0",
   "author": "Fabian Barney (https://github.com/fabian-barney)",
