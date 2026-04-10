@@ -80,6 +80,25 @@ npx cognitive-typescript
 
 Verified and unverified syntax shapes are tracked in [docs/compatibility-matrix.md](docs/compatibility-matrix.md). The matrix is backed by fixtures under `tests/fixtures/compatibility-matrix/`.
 
+## Release
+
+`v0.1.0` is the one-time bootstrap release for the public npm packages. The tag-triggered release workflow uses the GitHub repo `NPM_TOKEN` secret for npm authentication and `--provenance` for supply-chain attestation, while rendering the GitHub release notes from `CHANGELOG.md`.
+
+After `v0.1.0` is published successfully, configure npm Trusted Publishers manually for these packages against `fabian-barney/cognitive-typescript` and `.github/workflows/release.yml`:
+
+- `@barney-media/cognitive-typescript-core`
+- `@barney-media/cognitive-typescript`
+- `@barney-media/cognitive-typescript-vitest`
+- `@barney-media/cognitive-typescript-jest`
+
+The first pure Trusted Publisher release should then be cut as `v0.1.1` by removing `NPM_TOKEN` usage from the workflow while keeping the same workflow filename and `id-token: write` permission. After `v0.1.1` publishes successfully, remove the GitHub repo `NPM_TOKEN` secret.
+
+Release notes can be rendered locally with:
+
+```bash
+npm run render-release-notes -- v0.1.0
+```
+
 ## Contributing
 
 See `CONTRIBUTING.md` for the issue-linked branch, commit, and pull-request flow used in this repository.

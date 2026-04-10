@@ -36,37 +36,39 @@ jobs:
       - name: Verify release versions
         run: npm run verify-release-version
 
+      - name: Render release notes
+        run: node ./scripts/render-release-notes.mjs "${GITHUB_REF_NAME}" > release-notes.md
+
       - name: Run build and tests
         run: npm test
 
-      # Trusted Publishing uses the job OIDC token for auth and npm
-      # automatically emits provenance for public packages from public repos.
+      # Bootstrap the first public release with NPM_TOKEN auth and OIDC
+      # provenance, then switch this same workflow file to pure Trusted
+      # Publishing after the packages exist on npmjs.com.
       - name: Publish core
-        run: npm publish --workspace packages/core --access public
+        run: npm publish --workspace packages/core --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish CLI
-        run: npm publish --workspace packages/cli --access public
+        run: npm publish --workspace packages/cli --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish Vitest adapter
-        run: npm publish --workspace packages/vitest --access public
+        run: npm publish --workspace packages/vitest --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish Jest adapter
-        run: npm publish --workspace packages/jest --access public
+        run: npm publish --workspace packages/jest --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          cat > release-notes.md <<EOF
-          ## Packages
-
-          - \`@barney-media/cognitive-typescript-core@${version}\`
-          - \`@barney-media/cognitive-typescript@${version}\`
-          - \`@barney-media/cognitive-typescript-vitest@${version}\`
-          - \`@barney-media/cognitive-typescript-jest@${version}\`
-          EOF
-
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             gh release edit "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-notes.md
           else
