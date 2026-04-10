@@ -26,6 +26,7 @@
     "crap-typescript-check": "npm run build && vitest run --config vitest.crap.config.ts",
     "test": "npm run build && vitest run",
     "pack": "npm pack --workspaces",
+    "render-release-notes": "node ./scripts/render-release-notes.mjs",
     "verify-release-version": "node ./scripts/verify-release-version.mjs"
   },
   "devDependencies": {
