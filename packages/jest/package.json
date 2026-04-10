@@ -1,6 +1,6 @@
 {
   "name": "@barney-media/cognitive-typescript-jest",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Jest integration for cognitive-typescript.",
   "license": "Apache-2.0",
   "author": "Fabian Barney (https://github.com/fabian-barney)",
@@ -42,7 +42,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@barney-media/cognitive-typescript-core": "^0.1.0"
+    "@barney-media/cognitive-typescript-core": "^0.1.1"
   },
   "peerDependencies": {
     "jest": "^30.0.0"

@@ -82,21 +82,21 @@ Verified and unverified syntax shapes are tracked in [docs/compatibility-matrix.
 
 ## Release
 
-`v0.1.0` is the one-time bootstrap release for the public npm packages. The tag-triggered release workflow uses the GitHub repo `NPM_TOKEN` secret for npm authentication and `--provenance` for supply-chain attestation, while rendering the GitHub release notes from `CHANGELOG.md`.
+The default release path uses npm Trusted Publishing from `.github/workflows/release.yml`. Tag `v<version>` from `main` after the build workflow is green. The tag-triggered release workflow verifies package versions, renders the GitHub release notes from `CHANGELOG.md`, publishes the four public npm packages, and creates the GitHub release.
 
-After `v0.1.0` is published successfully, configure npm Trusted Publishers manually for these packages against `fabian-barney/cognitive-typescript` and `.github/workflows/release.yml`:
+`v0.1.0` was the one-time bootstrap release that used the GitHub repo `NPM_TOKEN` secret together with provenance so the package names could be created on npm. Trusted Publishers are now the default for these packages:
 
 - `@barney-media/cognitive-typescript-core`
 - `@barney-media/cognitive-typescript`
 - `@barney-media/cognitive-typescript-vitest`
 - `@barney-media/cognitive-typescript-jest`
 
-The first pure Trusted Publisher release should then be cut as `v0.1.1` by removing `NPM_TOKEN` usage from the workflow while keeping the same workflow filename and `id-token: write` permission. After `v0.1.1` publishes successfully, remove the GitHub repo `NPM_TOKEN` secret.
+After `v0.1.1` publishes successfully via Trusted Publishing, remove the GitHub repo `NPM_TOKEN` secret.
 
 Release notes can be rendered locally with:
 
 ```bash
-npm run render-release-notes -- v0.1.0
+npm run render-release-notes -- v0.1.1
 ```
 
 ## Contributing
