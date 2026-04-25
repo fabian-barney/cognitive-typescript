@@ -1,0 +1,11 @@
+{
+  "name": "fixture-karma-project",
+  "private": true,
+  "devDependencies": {
+    "jasmine-core": "^6.2.0",
+    "karma": "^6.4.4",
+    "karma-jasmine": "^5.1.0",
+    "karma-jsdom-launcher": "^21.0.0",
+    "jsdom": "^26.1.0"
+  }
+}

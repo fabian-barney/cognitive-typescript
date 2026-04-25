@@ -56,6 +56,9 @@ jobs:
       - name: Publish Jest adapter
         run: npm publish --workspace packages/jest --access public
 
+      - name: Publish Karma adapter
+        run: npm publish --workspace packages/karma --access public
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

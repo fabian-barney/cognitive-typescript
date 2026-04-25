@@ -21,7 +21,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "tsc -b packages/core packages/cli packages/vitest packages/jest",
+    "build": "tsc -b packages/core packages/cli packages/vitest packages/jest packages/karma",
     "cognitive-typescript-check": "node ./scripts/run-cognitive-typescript-gate.mjs packages",
     "crap-typescript-check": "npm run build && vitest run --config vitest.crap.config.ts",
     "test": "npm run build && vitest run",
@@ -31,9 +31,15 @@
   },
   "devDependencies": {
     "@barney-media/crap-typescript-vitest": "^0.2.2",
+    "@types/karma": "^6.3.9",
     "@types/node": "^25.5.1",
     "@vitest/coverage-v8": "^4.1.2",
+    "jasmine-core": "^6.2.0",
     "jest": "^30.3.0",
+    "jsdom": "^26.1.0",
+    "karma": "^6.4.4",
+    "karma-jasmine": "^5.1.0",
+    "karma-jsdom-launcher": "^21.0.0",
     "ts-jest": "^29.4.9",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"

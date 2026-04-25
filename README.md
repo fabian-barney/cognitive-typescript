@@ -10,6 +10,7 @@ It performs pure static analysis using the Sonar Cognitive Complexity white pape
 - `packages/cli`: executable `cognitive-typescript` package
 - `packages/vitest`: Vitest helper and reporter wrapper
 - `packages/jest`: Jest helper and reporter wrapper
+- `packages/karma`: Karma reporter wrapper for Karma/Jasmine projects
 
 ## Metric
 
@@ -52,6 +53,12 @@ Jest adapter:
 npm install --save-dev @barney-media/cognitive-typescript-jest jest
 ```
 
+Karma adapter:
+
+```bash
+npm install --save-dev @barney-media/cognitive-typescript-karma karma
+```
+
 ## Run
 
 From the project root you want to analyze:
@@ -82,7 +89,7 @@ Verified and unverified syntax shapes are tracked in [docs/compatibility-matrix.
 
 ## Release
 
-The default release path uses npm Trusted Publishing from `.github/workflows/release.yml`. Tag `v<version>` from `main` after the build workflow is green. The tag-triggered release workflow verifies package versions, renders the GitHub release notes from `CHANGELOG.md`, publishes the four public npm packages, and creates the GitHub release.
+The default release path uses npm Trusted Publishing from `.github/workflows/release.yml`. Tag `v<version>` from `main` after the build workflow is green. The tag-triggered release workflow verifies package versions, renders the GitHub release notes from `CHANGELOG.md`, publishes the five public npm packages, and creates the GitHub release.
 
 `v0.1.0` was the one-time bootstrap release that used the GitHub repo `NPM_TOKEN` secret together with provenance so the package names could be created on npm. Trusted Publishers are now the default for these packages:
 
@@ -90,6 +97,7 @@ The default release path uses npm Trusted Publishing from `.github/workflows/rel
 - `@barney-media/cognitive-typescript`
 - `@barney-media/cognitive-typescript-vitest`
 - `@barney-media/cognitive-typescript-jest`
+- `@barney-media/cognitive-typescript-karma`
 
 After `v0.1.1` publishes successfully via Trusted Publishing, remove the GitHub repo `NPM_TOKEN` secret.
 

@@ -6,7 +6,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
-- No unreleased changes.
+### Added
+
+- Added a Karma adapter for Karma/Jasmine projects.
 
 ## [0.1.1] - 2026-04-10
 

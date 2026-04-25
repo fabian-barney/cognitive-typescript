@@ -11,7 +11,8 @@ const packageFiles = [
   "packages/core/package.json",
   "packages/cli/package.json",
   "packages/vitest/package.json",
-  "packages/jest/package.json"
+  "packages/jest/package.json",
+  "packages/karma/package.json"
 ];
 
 for (const packageFile of packageFiles) {
