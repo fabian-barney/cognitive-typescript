@@ -99,17 +99,37 @@ export function buildAgentAnalysisReport(
 }
 
 export function formatAnalysisReport(metrics: MethodMetrics[], options: FormatAnalysisReportOptions): string {
-  const validatedThreshold = validateThreshold(options.threshold ?? COGNITIVE_COMPLEXITY_THRESHOLD);
-  if (options.format === "none") {
+  const prepared = prepareFormatRequest(options);
+  if (prepared.format === "none") {
     return "";
   }
 
+  const report = buildAnalysisReport(metrics, prepared.threshold, prepared.failuresOnly);
+  const primaryReport = prepared.omitMethodStatus ? omitMethodStatuses(report) : report;
+  return REPORT_FORMATTERS[prepared.format](primaryReport, prepared.omitRedundancy, prepared.elapsedSeconds);
+}
+
+interface PreparedFormatRequest {
+  elapsedSeconds: number;
+  failuresOnly: boolean;
+  format: ReportFormat;
+  omitMethodStatus: boolean;
+  omitRedundancy: boolean;
+  threshold: number;
+}
+
+function prepareFormatRequest(options: FormatAnalysisReportOptions): PreparedFormatRequest {
+  const format = options.format;
   const agent = options.agent ?? false;
-  const failuresOnly = options.failuresOnly ?? agent;
   const omitRedundancy = options.omitRedundancy ?? agent;
-  const report = buildAnalysisReport(metrics, validatedThreshold, failuresOnly);
-  const primaryReport = omitRedundancy && options.format !== "junit" ? omitMethodStatuses(report) : report;
-  return REPORT_FORMATTERS[options.format](primaryReport, omitRedundancy, options.elapsedSeconds ?? 0);
+  return {
+    format,
+    threshold: validateThreshold(options.threshold ?? COGNITIVE_COMPLEXITY_THRESHOLD),
+    failuresOnly: options.failuresOnly ?? agent,
+    omitRedundancy,
+    omitMethodStatus: omitRedundancy && format !== "junit",
+    elapsedSeconds: options.elapsedSeconds ?? 0
+  };
 }
 
 export function formatReport(metrics: MethodMetrics[]): string {

@@ -45,28 +45,16 @@ async function resolveReportPathTarget(
   filesystemCaseCache: FilesystemCaseCache
 ): Promise<ResolvedReportPathTarget> {
   const absolutePath = path.resolve(projectRoot, target.path);
-  if (isFilesystemRoot(absolutePath)) {
-    throw new Error(`${target.label} must target a report file, not a filesystem root`);
-  }
-  if (absolutePath === projectRoot) {
-    throw new Error(`${target.label} must target a report file, not the project root`);
-  }
+  assertReportTargetPath(projectRoot, absolutePath, target.label);
   assertInsideProjectRoot(projectRoot, absolutePath, target.label);
-
-  const stats = await statIfExists(absolutePath);
-  if (stats?.isDirectory()) {
-    throw new Error(`${target.label} must target a report file, not an existing directory`);
-  }
-
+  await assertTargetIsNotDirectory(absolutePath, target.label);
   const canonicalPath = await canonicalizeReportPath(absolutePath);
-  const canonicalRoot = await canonicalizeExistingParent(projectRoot);
-  if (!isInsidePath(canonicalRoot, canonicalPath)) {
-    throw new Error(`${target.label} must stay inside the project root`);
-  }
-
-  const caseInsensitiveFilesystem = shouldCheckCaseCollisions
-    ? await caseInsensitiveFilesystemForTarget(absolutePath, filesystemCaseCache)
-    : false;
+  await assertCanonicalPathInsideProjectRoot(projectRoot, canonicalPath, target.label);
+  const caseInsensitiveFilesystem = await collisionCaseSensitivity(
+    shouldCheckCaseCollisions,
+    absolutePath,
+    filesystemCaseCache
+  );
 
   return {
     label: target.label,
@@ -74,6 +62,44 @@ async function resolveReportPathTarget(
     absolutePath,
     collisionPath: normalizeReportPathForCollision(canonicalPath, caseInsensitiveFilesystem)
   };
+}
+
+function assertReportTargetPath(projectRoot: string, absolutePath: string, label: string): void {
+  if (isFilesystemRoot(absolutePath)) {
+    throw new Error(`${label} must target a report file, not a filesystem root`);
+  }
+  if (absolutePath === projectRoot) {
+    throw new Error(`${label} must target a report file, not the project root`);
+  }
+}
+
+async function assertTargetIsNotDirectory(absolutePath: string, label: string): Promise<void> {
+  const stats = await statIfExists(absolutePath);
+  if (stats?.isDirectory()) {
+    throw new Error(`${label} must target a report file, not an existing directory`);
+  }
+}
+
+async function assertCanonicalPathInsideProjectRoot(
+  projectRoot: string,
+  canonicalPath: string,
+  label: string
+): Promise<void> {
+  const canonicalRoot = await canonicalizeExistingParent(projectRoot);
+  if (!isInsidePath(canonicalRoot, canonicalPath)) {
+    throw new Error(`${label} must stay inside the project root`);
+  }
+}
+
+async function collisionCaseSensitivity(
+  shouldCheckCaseCollisions: boolean,
+  absolutePath: string,
+  filesystemCaseCache: FilesystemCaseCache
+): Promise<boolean> {
+  if (!shouldCheckCaseCollisions) {
+    return false;
+  }
+  return caseInsensitiveFilesystemForTarget(absolutePath, filesystemCaseCache);
 }
 
 async function caseInsensitiveFilesystemForTarget(
@@ -131,18 +157,45 @@ async function canonicalizeReportPath(filePath: string): Promise<string> {
 }
 
 async function canonicalizeExistingParent(directoryPath: string): Promise<string> {
+  const resolved = await resolveCanonicalParent(directoryPath);
+  return resolved.missingSegments.reduce(
+    (currentPath, segment) => path.join(currentPath, segment),
+    resolved.canonicalPath
+  );
+}
+
+interface CanonicalParentResolution {
+  canonicalPath: string;
+  missingSegments: string[];
+}
+
+async function resolveCanonicalParent(directoryPath: string): Promise<CanonicalParentResolution> {
   try {
-    return await realpath(directoryPath);
+    return {
+      canonicalPath: await realpath(directoryPath),
+      missingSegments: []
+    };
   } catch (error) {
     if (!isMissingPathError(error)) {
       throw error;
     }
-    const parent = path.dirname(directoryPath);
-    if (parent === directoryPath) {
-      return directoryPath;
-    }
-    return path.join(await canonicalizeExistingParent(parent), path.basename(directoryPath));
+    return resolveMissingCanonicalParent(directoryPath);
   }
+}
+
+async function resolveMissingCanonicalParent(directoryPath: string): Promise<CanonicalParentResolution> {
+  const parent = path.dirname(directoryPath);
+  if (parent === directoryPath) {
+    return {
+      canonicalPath: directoryPath,
+      missingSegments: []
+    };
+  }
+  const resolvedParent = await resolveCanonicalParent(parent);
+  return {
+    canonicalPath: resolvedParent.canonicalPath,
+    missingSegments: [...resolvedParent.missingSegments, path.basename(directoryPath)]
+  };
 }
 
 async function nearestExistingParent(directoryPath: string): Promise<string> {

@@ -227,22 +227,23 @@ function validateCliState(state: ParseState): void {
 }
 
 function validateHelpIsStandalone(state: ParseState): void {
-  if (!state.help) {
-    return;
-  }
-  if (
-    state.changedSeen
-    || state.formatSeen
-    || state.thresholdSeen
-    || state.agentSeen
-    || state.failuresOnlySeen
-    || state.omitRedundancySeen
-    || state.outputSeen
-    || state.junitReportSeen
-    || state.fileArgs.length > 0
-  ) {
+  if (state.help && hasHelpConflicts(state)) {
     throw new Error("--help cannot be combined with other options or file arguments");
   }
+}
+
+function hasHelpConflicts(state: ParseState): boolean {
+  return [
+    state.changedSeen,
+    state.formatSeen,
+    state.thresholdSeen,
+    state.agentSeen,
+    state.failuresOnlySeen,
+    state.omitRedundancySeen,
+    state.outputSeen,
+    state.junitReportSeen,
+    state.fileArgs.length > 0
+  ].some(Boolean);
 }
 
 function cliMode(state: ParseState): AnalysisCliArguments["mode"] {
