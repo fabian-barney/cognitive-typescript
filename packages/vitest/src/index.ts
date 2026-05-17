@@ -65,7 +65,7 @@ export class CognitiveTypescriptVitestReporter {
     try {
       await validateReportPathTargets(options.projectRoot, [
         { label: "--output", path: options.output },
-        { label: "--junit-report", path: options.junitReport }
+        { label: "--junit-report", path: options.junit ? options.junitReport : undefined }
       ]);
       if (!options.junit) {
         await deleteOwnedReportFile(options.projectRoot, options.junitReport);

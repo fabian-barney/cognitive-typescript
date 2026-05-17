@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { NO_ANALYZABLE_FUNCTIONS_MESSAGE } from "@barney-media/cognitive-typescript-core";
 import { StringWriter, createTempDir, disposeTempDir, writeProjectFiles } from "../../core/test/testUtils";
 import { CognitiveTypescriptVitestReporter } from "../src/index";
 
@@ -39,6 +40,26 @@ describe("CognitiveTypescriptVitestReporter", () => {
     await reporter.onTestRunEnd();
 
     expect(stdout.toString()).toContain("No TypeScript files to analyze.");
+    expect(stderr.toString()).toBe("");
+  });
+
+  it("prints the no-analyzable-functions message when selected files contain declarations only", async () => {
+    const projectRoot = await createProject({
+      "src/types.ts": "export interface Sample { value: string; }"
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CognitiveTypescriptVitestReporter({
+      projectRoot,
+      paths: ["src"],
+      stdout,
+      stderr
+    });
+
+    await reporter.onTestRunEnd();
+
+    expect(stdout.toString()).toContain(NO_ANALYZABLE_FUNCTIONS_MESSAGE);
     expect(stderr.toString()).toBe("");
   });
 
@@ -146,7 +167,10 @@ describe("CognitiveTypescriptVitestReporter", () => {
       "src/sample.ts": buildSimpleFunction("safe")
     });
     await mkdir(path.dirname(path.join(projectRoot, DEFAULT_JUNIT_REPORT)), { recursive: true });
-    await writeFile(path.join(projectRoot, DEFAULT_JUNIT_REPORT), "stale");
+    await writeFile(
+      path.join(projectRoot, DEFAULT_JUNIT_REPORT),
+      '<?xml version="1.0" encoding="UTF-8"?><testsuites name="cognitive-typescript"></testsuites>'
+    );
 
     const reporter = new CognitiveTypescriptVitestReporter({
       projectRoot,
@@ -161,6 +185,30 @@ describe("CognitiveTypescriptVitestReporter", () => {
     await reporter.onTestRunEnd();
 
     expect(existsSync(path.join(projectRoot, DEFAULT_JUNIT_REPORT))).toBe(false);
+    expect(await readText(path.join(projectRoot, "reports", "primary.json"))).toContain('"status": "passed"');
+  });
+
+  it("does not validate or delete unrelated junit paths when junit is disabled", async () => {
+    const projectRoot = await createProject({
+      "src/sample.ts": buildSimpleFunction("safe")
+    });
+    const externalReport = path.join(projectRoot, "..", "outside-junit.xml");
+    await writeFile(externalReport, "unrelated");
+
+    const reporter = new CognitiveTypescriptVitestReporter({
+      projectRoot,
+      paths: ["src"],
+      format: "json",
+      output: "reports/primary.json",
+      junit: false,
+      junitReport: "../outside-junit.xml",
+      stdout: new StringWriter(),
+      stderr: new StringWriter()
+    });
+
+    await reporter.onTestRunEnd();
+
+    expect(await readText(externalReport)).toBe("unrelated");
     expect(await readText(path.join(projectRoot, "reports", "primary.json"))).toContain('"status": "passed"');
   });
 

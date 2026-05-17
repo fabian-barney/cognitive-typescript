@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { formatAnalysisReport } from "./report";
@@ -42,8 +42,14 @@ export async function deleteOwnedReportFile(projectRoot: string, reportPath: str
   if (!reportPath) {
     return;
   }
+  const absoluteProjectRoot = path.resolve(projectRoot);
   const absolutePath = path.resolve(projectRoot, reportPath);
-  assertInsideProjectRoot(path.resolve(projectRoot), absolutePath, "Report path");
+  if (!isInsideProjectRoot(absoluteProjectRoot, absolutePath)) {
+    return;
+  }
+  if (!(await isOwnedJunitSidecar(absolutePath))) {
+    return;
+  }
   await rm(absolutePath, { force: true });
 }
 
@@ -52,4 +58,21 @@ async function writeReportFile(projectRoot: string, reportPath: string, content:
   assertInsideProjectRoot(path.resolve(projectRoot), absolutePath, "Report path");
   await mkdir(path.dirname(absolutePath), { recursive: true });
   await writeFile(absolutePath, content);
+}
+
+async function isOwnedJunitSidecar(reportPath: string): Promise<boolean> {
+  try {
+    const content = await readFile(reportPath, "utf8");
+    return content.includes("<testsuites") && content.includes('name="cognitive-typescript"');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+}
+
+function isInsideProjectRoot(projectRoot: string, targetPath: string): boolean {
+  const relative = path.relative(projectRoot, targetPath);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }

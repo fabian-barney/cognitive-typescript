@@ -54,7 +54,7 @@ export default class CognitiveTypescriptJestReporter {
     try {
       await validateReportPathTargets(options.projectRoot, [
         { label: "--output", path: options.output },
-        { label: "--junit-report", path: options.junitReport }
+        { label: "--junit-report", path: options.junit ? options.junitReport : undefined }
       ]);
       if (!options.junit) {
         await deleteOwnedReportFile(options.projectRoot, options.junitReport);
@@ -89,10 +89,9 @@ export default class CognitiveTypescriptJestReporter {
         junitReport: options.junit ? options.junitReport : undefined
       });
       if (result.thresholdExceeded) {
-        const thresholdError = new Error(
-          `Cognitive Complexity threshold exceeded: ${result.maxCognitiveComplexity} > ${result.threshold}`
+        options.stderr.write(
+          `Cognitive Complexity threshold exceeded: ${result.maxCognitiveComplexity} > ${result.threshold}\n`
         );
-        options.stderr.write(`${thresholdError.message}\n`);
         process.exitCode = 2;
       }
     } catch (error) {
