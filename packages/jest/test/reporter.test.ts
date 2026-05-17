@@ -1,9 +1,14 @@
+import { existsSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { StringWriter, createTempDir, disposeTempDir, writeProjectFiles } from "../../core/test/testUtils";
 import CognitiveTypescriptJestReporter from "../src/reporter";
 
 const tempDirs: string[] = [];
+const DEFAULT_JUNIT_REPORT = path.join("reports", "cognitive-typescript", "TEST-cognitive-typescript.xml");
 let originalExitCode: number | undefined;
 
 beforeEach(() => {
@@ -38,12 +43,9 @@ describe("CognitiveTypescriptJestReporter", () => {
     expect(reporter.getLastError()).toBeUndefined();
   });
 
-  it("stores the threshold error when the project exceeds the limit", async () => {
-    const projectRoot = await createTempDir("cognitive-jest-reporter-");
-    tempDirs.push(projectRoot);
-    await writeProjectFiles(projectRoot, {
-      "package.json": '{"name":"fixture","private":true}',
-      "src/sample.ts": `${buildDeepNestedIfFunction("tooComplex", 7)}`
+  it("writes only the default JUnit sidecar with default report controls", async () => {
+    const projectRoot = await createProject({
+      "src/sample.ts": buildSimpleFunction("safe")
     });
 
     const stdout = new StringWriter();
@@ -57,12 +59,177 @@ describe("CognitiveTypescriptJestReporter", () => {
 
     await reporter.onRunComplete();
 
-    expect(stdout.toString()).toContain("tooComplex");
+    expect(stdout.toString()).toBe("");
+    expect(stderr.toString()).toBe("");
+    const junit = await readText(path.join(projectRoot, DEFAULT_JUNIT_REPORT));
+    expect(junit).toContain("<testsuites");
+    expect(junit).toContain('classname="src/sample.ts"');
+    expect(junit).toContain('<property name="status" value="passed"/>');
+  });
+
+  it("writes configured primary and JUnit reports through the shared pipeline", async () => {
+    const projectRoot = await createProject({
+      "src/sample.ts": buildSimpleFunction("safe")
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CognitiveTypescriptJestReporter(undefined, {
+      projectRoot,
+      paths: ["src"],
+      format: "json",
+      agent: true,
+      failuresOnly: false,
+      omitRedundancy: true,
+      output: "reports/primary.json",
+      junit: true,
+      junitReport: "reports/custom-junit.xml",
+      threshold: 9,
+      stdout,
+      stderr
+    });
+
+    await reporter.onRunComplete();
+
+    expect(stdout.toString()).toBe("");
+    expect(stderr.toString()).toBe("");
+    const primary = JSON.parse(await readText(path.join(projectRoot, "reports", "primary.json"))) as {
+      threshold: number;
+      methods: Array<Record<string, unknown>>;
+    };
+    expect(primary.threshold).toBe(9);
+    expect(primary.methods).toEqual([
+      expect.objectContaining({
+        method: "safe"
+      })
+    ]);
+    expect(primary.methods[0]).not.toHaveProperty("status");
+    expect(existsSync(path.join(projectRoot, DEFAULT_JUNIT_REPORT))).toBe(false);
+    const junit = await readText(path.join(projectRoot, "reports", "custom-junit.xml"));
+    expect(junit).toContain('classname="src/sample.ts"');
+    expect(junit).toContain('<property name="status" value="passed"/>');
+  });
+
+  it("lets explicit agent overrides keep full output", async () => {
+    const projectRoot = await createProject({
+      "src/sample.ts": `${buildSimpleFunction("safe")}\n\n${buildDeepNestedIfFunction("tooComplex", 7)}`
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CognitiveTypescriptJestReporter(undefined, {
+      projectRoot,
+      paths: ["src"],
+      format: "json",
+      agent: true,
+      failuresOnly: false,
+      omitRedundancy: false,
+      stdout,
+      stderr
+    });
+
+    await reporter.onRunComplete();
+
+    const primary = JSON.parse(stdout.toString()) as {
+      methods: Array<Record<string, unknown>>;
+    };
+    expect(primary.methods).toHaveLength(2);
+    expect(primary.methods).toEqual(expect.arrayContaining([
+      expect.objectContaining({ method: "safe", status: "passed" }),
+      expect.objectContaining({ method: "tooComplex", status: "failed" })
+    ]));
     expect(stderr.toString()).toContain("Cognitive Complexity threshold exceeded");
+    expect(process.exitCode).toBe(2);
+  });
+
+  it("suppresses and cleans the JUnit sidecar when junit is disabled", async () => {
+    const projectRoot = await createProject({
+      "src/sample.ts": buildSimpleFunction("safe")
+    });
+    await mkdir(path.dirname(path.join(projectRoot, DEFAULT_JUNIT_REPORT)), { recursive: true });
+    await writeFile(path.join(projectRoot, DEFAULT_JUNIT_REPORT), "stale");
+
+    const reporter = new CognitiveTypescriptJestReporter(undefined, {
+      projectRoot,
+      paths: ["src"],
+      format: "json",
+      output: "reports/primary.json",
+      junit: false,
+      stdout: new StringWriter(),
+      stderr: new StringWriter()
+    });
+
+    await reporter.onRunComplete();
+
+    expect(existsSync(path.join(projectRoot, DEFAULT_JUNIT_REPORT))).toBe(false);
+    expect(await readText(path.join(projectRoot, "reports", "primary.json"))).toContain('"status": "passed"');
+  });
+
+  it("reports invalid report paths as configuration errors", async () => {
+    const projectRoot = await createProject({
+      "src/sample.ts": buildSimpleFunction("safe")
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CognitiveTypescriptJestReporter(undefined, {
+      projectRoot,
+      paths: ["src"],
+      output: "../outside.json",
+      stdout,
+      stderr
+    });
+
+    await reporter.onRunComplete();
+
+    expect(stdout.toString()).toBe("");
+    expect(stderr.toString()).toContain("--output must stay inside the project root");
     expect(reporter.getLastError()).toBeInstanceOf(Error);
     expect(process.exitCode).toBe(1);
   });
+
+  it("stores the threshold error and exits with code 2 when the project exceeds the limit", async () => {
+    const projectRoot = await createProject({
+      "src/sample.ts": buildDeepNestedIfFunction("tooComplex", 7)
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CognitiveTypescriptJestReporter(undefined, {
+      projectRoot,
+      paths: ["src"],
+      format: "text",
+      stdout,
+      stderr
+    });
+
+    await reporter.onRunComplete();
+
+    expect(stdout.toString()).toContain("tooComplex");
+    expect(stderr.toString()).toContain("Cognitive Complexity threshold exceeded");
+    expect(reporter.getLastError()).toBeUndefined();
+    expect(process.exitCode).toBe(2);
+  });
 });
+
+async function createProject(files: Record<string, string>): Promise<string> {
+  const projectRoot = await createTempDir("cognitive-jest-reporter-");
+  tempDirs.push(projectRoot);
+  await writeProjectFiles(projectRoot, {
+    "package.json": '{"name":"fixture","private":true}',
+    ...files
+  });
+  return projectRoot;
+}
+
+function buildSimpleFunction(name: string): string {
+  return `export function ${name}(value: boolean): number {
+  if (value) {
+    return 1;
+  }
+  return 0;
+}`;
+}
 
 function buildDeepNestedIfFunction(name: string, depth: number): string {
   const parameters = Array.from({ length: depth }, (_value, index) => `flag${index + 1}: boolean`).join(", ");
@@ -80,4 +247,8 @@ function buildDeepNestedIfFunction(name: string, depth: number): string {
   lines.push("  return 0;");
   lines.push("}");
   return lines.join("\n");
+}
+
+async function readText(filePath: string): Promise<string> {
+  return readFile(filePath, "utf8");
 }

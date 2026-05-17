@@ -41,7 +41,7 @@ module.exports = withCognitiveTypescriptVitest(
       projectRoot
     );
 
-    expect(result.exitCode).not.toBe(0);
+    expect(result.exitCode).toBe(2);
     expect(`${result.stdout}\n${result.stderr}`).toContain("Cognitive Complexity threshold exceeded");
   });
 });

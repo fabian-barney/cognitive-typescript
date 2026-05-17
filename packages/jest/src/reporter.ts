@@ -1,16 +1,28 @@
+import path from "node:path";
+
 import {
   analyzeProject,
   COGNITIVE_COMPLEXITY_THRESHOLD,
-  formatReport,
+  deleteOwnedReportFile,
   NO_ANALYZABLE_FUNCTIONS_MESSAGE,
-  NO_FILES_MESSAGE
+  NO_FILES_MESSAGE,
+  publishAnalysisReports,
+  validateReportPathTargets
 } from "@barney-media/cognitive-typescript-core";
-import type { Writer } from "@barney-media/cognitive-typescript-core";
+import type { ReportFormat, Writer } from "@barney-media/cognitive-typescript-core";
 
 export interface CognitiveTypescriptJestOptions {
   projectRoot?: string;
   changedOnly?: boolean;
   paths?: string[];
+  format?: ReportFormat;
+  agent?: boolean;
+  failuresOnly?: boolean;
+  omitRedundancy?: boolean;
+  output?: string;
+  junit?: boolean;
+  junitReport?: string;
+  threshold?: number;
   stdout?: Writer;
   stderr?: Writer;
 }
@@ -19,9 +31,19 @@ interface ResolvedReporterOptions {
   projectRoot: string;
   paths: string[];
   changedOnly: boolean;
+  format: ReportFormat;
+  agent: boolean;
+  failuresOnly: boolean | undefined;
+  omitRedundancy: boolean | undefined;
+  output: string | undefined;
+  junit: boolean;
+  junitReport: string;
+  threshold: number;
   stdout: Writer;
   stderr: Writer;
 }
+
+const DEFAULT_JUNIT_REPORT = path.join("reports", "cognitive-typescript", "TEST-cognitive-typescript.xml");
 
 export default class CognitiveTypescriptJestReporter {
   private error: Error | undefined;
@@ -46,10 +68,19 @@ export default class CognitiveTypescriptJestReporter {
   private async finalize(): Promise<void> {
     const options = resolveReporterOptions(this.options);
     try {
+      await validateReportPathTargets(options.projectRoot, [
+        { label: "--output", path: options.output },
+        { label: "--junit-report", path: options.junitReport }
+      ]);
+      if (!options.junit) {
+        await deleteOwnedReportFile(options.projectRoot, options.junitReport);
+      }
+
       const result = await analyzeProject({
         projectRoot: options.projectRoot,
         explicitPaths: options.paths,
-        changedOnly: options.changedOnly
+        changedOnly: options.changedOnly,
+        threshold: options.threshold
       });
 
       if (result.selectedFiles.length === 0) {
@@ -61,13 +92,24 @@ export default class CognitiveTypescriptJestReporter {
         return;
       }
 
-      options.stdout.write(`${formatReport(result.metrics)}\n`);
+      await publishAnalysisReports({
+        projectRoot: options.projectRoot,
+        stdout: options.stdout,
+        metrics: result.metrics,
+        format: options.format,
+        agent: options.agent,
+        threshold: result.threshold,
+        failuresOnly: options.failuresOnly,
+        omitRedundancy: options.omitRedundancy,
+        output: options.output,
+        junitReport: options.junit ? options.junitReport : undefined
+      });
       if (result.thresholdExceeded) {
-        this.error = new Error(
-          `Cognitive Complexity threshold exceeded: ${result.maxCognitiveComplexity} > ${COGNITIVE_COMPLEXITY_THRESHOLD}`
+        const thresholdError = new Error(
+          `Cognitive Complexity threshold exceeded: ${result.maxCognitiveComplexity} > ${result.threshold}`
         );
-        options.stderr.write(`${this.error.message}\n`);
-        process.exitCode = 1;
+        options.stderr.write(`${thresholdError.message}\n`);
+        process.exitCode = 2;
       }
     } catch (error) {
       this.error = toError(error);
@@ -78,10 +120,19 @@ export default class CognitiveTypescriptJestReporter {
 }
 
 function resolveReporterOptions(options: CognitiveTypescriptJestOptions): ResolvedReporterOptions {
+  const agent = options.agent ?? false;
   return {
     projectRoot: options.projectRoot ?? process.cwd(),
     paths: options.paths ?? [],
     changedOnly: options.changedOnly ?? false,
+    format: options.format ?? (agent ? "toon" : "none"),
+    agent,
+    failuresOnly: options.failuresOnly,
+    omitRedundancy: options.omitRedundancy,
+    output: options.output,
+    junit: options.junit ?? true,
+    junitReport: options.junitReport ?? DEFAULT_JUNIT_REPORT,
+    threshold: options.threshold ?? COGNITIVE_COMPLEXITY_THRESHOLD,
     stdout: options.stdout ?? process.stdout,
     stderr: options.stderr ?? process.stderr
   };

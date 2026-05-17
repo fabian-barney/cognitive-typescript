@@ -12,6 +12,8 @@ export {
   formatToonReport,
   sortMetrics
 } from "./report";
+export { deleteOwnedReportFile, publishAnalysisReports } from "./reportPublishing";
+export { validateReportPathTargets } from "./reportPaths";
 export {
   COGNITIVE_COMPLEXITY_THRESHOLD,
   NO_FILES_MESSAGE,
@@ -25,6 +27,7 @@ export type {
   HelpCliArguments,
   MethodDescriptor,
   MethodMetrics,
+  PublishAnalysisReportsOptions,
   ReportFormat,
   ReportStatus,
   Writer

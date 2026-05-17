@@ -23,4 +23,26 @@ describe("withCognitiveTypescriptJest", () => {
       [expect.any(String), {}]
     ]);
   });
+
+  it("forwards configured reporter options without mutating coverage settings", () => {
+    const options = {
+      format: "json" as const,
+      junit: false,
+      threshold: 9
+    };
+    const config = withCognitiveTypescriptJest(
+      {
+        collectCoverage: true,
+        coverageDirectory: "coverage"
+      },
+      options
+    );
+
+    expect(config.collectCoverage).toBe(true);
+    expect(config.coverageDirectory).toBe("coverage");
+    expect(config.reporters).toEqual([
+      "default",
+      [expect.any(String), options]
+    ]);
+  });
 });

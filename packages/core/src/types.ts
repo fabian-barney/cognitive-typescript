@@ -65,3 +65,17 @@ export interface AnalysisResult {
   selectedFiles: string[];
   warnings: string[];
 }
+
+export interface PublishAnalysisReportsOptions {
+  projectRoot: string;
+  stdout: Writer;
+  metrics: MethodMetrics[];
+  format: ReportFormat;
+  threshold: number;
+  agent?: boolean;
+  failuresOnly?: boolean;
+  omitRedundancy?: boolean;
+  output?: string;
+  junitReport?: string;
+  elapsedSeconds?: number;
+}
