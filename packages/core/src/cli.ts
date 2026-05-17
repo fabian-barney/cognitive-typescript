@@ -447,7 +447,6 @@ async function writeCliReports(
 ): Promise<void> {
   const primaryReport = formatAnalysisReport(result.metrics, {
     format: parsed.format,
-    agent: parsed.agent,
     threshold: result.threshold,
     failuresOnly: parsed.failuresOnly,
     omitRedundancy: parsed.omitRedundancy,

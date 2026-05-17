@@ -13,8 +13,6 @@ interface ResolvedReportPathTarget {
   collisionPath: string;
 }
 
-type FilesystemCaseCache = Map<string, boolean>;
-
 export async function validateReportPathTargets(
   projectRoot: string,
   targets: ReportPathTarget[]
@@ -24,10 +22,9 @@ export async function validateReportPathTargets(
     target.path !== undefined
   ));
   const shouldCheckCaseCollisions = reportTargets.length > 1;
-  const filesystemCaseCache: FilesystemCaseCache = new Map();
   const resolvedTargets = await Promise.all(
     reportTargets.map((target) => (
-      resolveReportPathTarget(root, target, shouldCheckCaseCollisions, filesystemCaseCache)
+      resolveReportPathTarget(root, target, shouldCheckCaseCollisions)
     ))
   );
 
@@ -41,8 +38,7 @@ export async function validateReportPathTargets(
 async function resolveReportPathTarget(
   projectRoot: string,
   target: { label: string; path: string },
-  shouldCheckCaseCollisions: boolean,
-  filesystemCaseCache: FilesystemCaseCache
+  shouldCheckCaseCollisions: boolean
 ): Promise<ResolvedReportPathTarget> {
   const absolutePath = path.resolve(projectRoot, target.path);
   assertReportTargetPath(projectRoot, absolutePath, target.label);
@@ -50,11 +46,7 @@ async function resolveReportPathTarget(
   await assertTargetIsNotDirectory(absolutePath, target.label);
   const canonicalPath = await canonicalizeReportPath(absolutePath);
   await assertCanonicalPathInsideProjectRoot(projectRoot, canonicalPath, target.label);
-  const caseInsensitiveFilesystem = await collisionCaseSensitivity(
-    shouldCheckCaseCollisions,
-    absolutePath,
-    filesystemCaseCache
-  );
+  const caseInsensitiveFilesystem = collisionCaseSensitivity(shouldCheckCaseCollisions);
 
   return {
     label: target.label,
@@ -91,29 +83,11 @@ async function assertCanonicalPathInsideProjectRoot(
   }
 }
 
-async function collisionCaseSensitivity(
-  shouldCheckCaseCollisions: boolean,
-  absolutePath: string,
-  filesystemCaseCache: FilesystemCaseCache
-): Promise<boolean> {
+function collisionCaseSensitivity(shouldCheckCaseCollisions: boolean): boolean {
   if (!shouldCheckCaseCollisions) {
     return false;
   }
-  return caseInsensitiveFilesystemForTarget(absolutePath, filesystemCaseCache);
-}
-
-async function caseInsensitiveFilesystemForTarget(
-  absolutePath: string,
-  filesystemCaseCache: FilesystemCaseCache
-): Promise<boolean> {
-  const parent = await nearestExistingParent(path.dirname(absolutePath));
-  const cached = filesystemCaseCache.get(parent);
-  if (cached !== undefined) {
-    return cached;
-  }
-  const caseInsensitiveFilesystem = defaultCaseInsensitiveFilesystem();
-  filesystemCaseCache.set(parent, caseInsensitiveFilesystem);
-  return caseInsensitiveFilesystem;
+  return defaultCaseInsensitiveFilesystem();
 }
 
 export function assertInsideProjectRoot(projectRoot: string, candidatePath: string, label: string): void {
@@ -196,18 +170,6 @@ async function resolveMissingCanonicalParent(directoryPath: string): Promise<Can
     canonicalPath: resolvedParent.canonicalPath,
     missingSegments: [...resolvedParent.missingSegments, path.basename(directoryPath)]
   };
-}
-
-async function nearestExistingParent(directoryPath: string): Promise<string> {
-  const stats = await statIfExists(directoryPath);
-  if (stats?.isDirectory()) {
-    return realpath(directoryPath);
-  }
-  const parent = path.dirname(directoryPath);
-  if (parent === directoryPath) {
-    return directoryPath;
-  }
-  return nearestExistingParent(parent);
 }
 
 function normalizeReportPathForCollision(filePath: string, caseInsensitiveFilesystem: boolean): string {
