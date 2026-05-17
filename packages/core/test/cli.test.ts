@@ -11,7 +11,7 @@ afterEach(async () => {
 
 describe("cli", () => {
   it("parses help and changed modes", () => {
-    expect(parseCliArguments(["--help"])).toMatchObject({ mode: "help", fileArgs: [] });
+    expect(parseCliArguments(["--help"])).toEqual({ mode: "help", fileArgs: [] });
     expect(parseCliArguments(["--changed"])).toMatchObject({ mode: "changed", fileArgs: [] });
     expect(() => parseCliArguments(["--changed", "src"])).toThrow("--changed cannot be combined with file arguments");
   });
@@ -45,6 +45,8 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--format", "json", "--format=text"])).toThrow(
       "--format can only be provided once"
     );
+    expect(() => parseCliArguments(["--format"])).toThrow("--format requires a format");
+    expect(() => parseCliArguments(["--format="])).toThrow("--format requires a format");
     expect(() => parseCliArguments(["--failures-only=True"])).toThrow(
       "--failures-only requires true or false when a value is provided"
     );
@@ -105,8 +107,9 @@ describe("cli", () => {
     const exitCode = await runCli(["--changed", "src"], process.cwd(), stdout, stderr);
 
     expect(exitCode).toBe(1);
-    expect(stdout.toString()).toContain("Usage:");
+    expect(stdout.toString()).toBe("");
     expect(stderr.toString()).toContain("--changed cannot be combined with file arguments");
+    expect(stderr.toString()).toContain("Usage:");
   });
 
   it("returns exit code 2 when the threshold is exceeded", async () => {

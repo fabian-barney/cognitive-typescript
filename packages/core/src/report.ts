@@ -3,7 +3,6 @@ import { XMLBuilder } from "fast-xml-parser";
 import { COGNITIVE_COMPLEXITY_THRESHOLD, validateThreshold } from "./constants";
 import type {
   MethodMetrics,
-  MethodReportStatus,
   ReportFormat,
   ReportStatus
 } from "./types";
@@ -13,7 +12,7 @@ const COMPACT_METHOD_COLUMNS = ["cc", "method", "src", "lineStart", "lineEnd"] a
 const RIGHT_ALIGNED_TEXT_COLUMNS = new Set<MethodColumn>(["cc", "lineStart", "lineEnd"]);
 
 export interface MethodReportEntry {
-  status: MethodReportStatus;
+  status: ReportStatus;
   cc: number;
   method: string;
   src: string;
@@ -80,14 +79,14 @@ export function sortMetrics(metrics: MethodMetrics[]): MethodMetrics[] {
 export function buildAnalysisReport(
   metrics: MethodMetrics[],
   threshold = COGNITIVE_COMPLEXITY_THRESHOLD,
-  failuresOnly = false
+  filterToFailures = false
 ): AnalysisReport {
-  threshold = validateThreshold(threshold);
-  const allMethods = sortMetrics(metrics).map((metric) => toMethodReportEntry(metric, threshold));
+  const validatedThreshold = validateThreshold(threshold);
+  const allMethods = sortMetrics(metrics).map((metric) => toMethodReportEntry(metric, validatedThreshold));
   return {
     status: allMethods.some((method) => method.status === "failed") ? "failed" : "passed",
-    threshold,
-    methods: failuresOnly ? allMethods.filter((method) => method.status === "failed") : allMethods
+    threshold: validatedThreshold,
+    methods: filterToFailures ? allMethods.filter((method) => method.status === "failed") : allMethods
   };
 }
 
@@ -100,8 +99,7 @@ export function buildAgentAnalysisReport(
 }
 
 export function formatAnalysisReport(metrics: MethodMetrics[], options: FormatAnalysisReportOptions): string {
-  const threshold = options.threshold ?? COGNITIVE_COMPLEXITY_THRESHOLD;
-  validateThreshold(threshold);
+  const validatedThreshold = validateThreshold(options.threshold ?? COGNITIVE_COMPLEXITY_THRESHOLD);
   if (options.format === "none") {
     return "";
   }
@@ -109,7 +107,7 @@ export function formatAnalysisReport(metrics: MethodMetrics[], options: FormatAn
   const agent = options.agent ?? false;
   const failuresOnly = options.failuresOnly ?? agent;
   const omitRedundancy = options.omitRedundancy ?? agent;
-  const report = buildAnalysisReport(metrics, threshold, failuresOnly);
+  const report = buildAnalysisReport(metrics, validatedThreshold, failuresOnly);
   const primaryReport = omitRedundancy && options.format !== "junit" ? omitMethodStatuses(report) : report;
   return REPORT_FORMATTERS[options.format](primaryReport, omitRedundancy, options.elapsedSeconds ?? 0);
 }
@@ -168,7 +166,7 @@ function toMethodReportEntry(metric: MethodMetrics, threshold: number): MethodRe
 }
 
 function reportHasMethodStatus(report: SerializableReport): report is AnalysisReport {
-  return report.methods.length > 0 && report.methods.every((method) => "status" in method);
+  return report.methods.length === 0 || report.methods.every((method) => "status" in method);
 }
 
 function omitMethodStatuses(report: AnalysisReport): CompactAnalysisReport {
@@ -341,5 +339,8 @@ function junitDiagnosticText(entry: MethodReportEntry, threshold: number): strin
 }
 
 function formatTime(elapsedSeconds: number): string {
-  return Math.max(0, elapsedSeconds).toFixed(6);
+  if (elapsedSeconds <= 0) {
+    return "0.000000";
+  }
+  return Math.max(elapsedSeconds, 1e-6).toFixed(6);
 }

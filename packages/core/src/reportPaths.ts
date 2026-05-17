@@ -1,4 +1,4 @@
-import { access, mkdtemp, realpath, rm, stat, writeFile } from "node:fs/promises";
+import { realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 export interface ReportPathTarget {
@@ -159,33 +159,12 @@ function normalizeReportPathForCollision(filePath: string, caseInsensitiveFilesy
 }
 
 async function isCaseInsensitiveFilesystem(projectRoot: string): Promise<boolean> {
-  const probeDirectory = await createCaseProbeDirectory(projectRoot);
-  if (probeDirectory === undefined) {
-    return defaultCaseInsensitiveFilesystem();
-  }
-
-  try {
-    const probeFile = path.join(probeDirectory, "cognitive-typescript-case-probe");
-    await writeFile(probeFile, "");
-    await access(path.join(probeDirectory, "COGNITIVE-TYPESCRIPT-CASE-PROBE"));
-    return true;
-  } catch (error) {
-    return isMissingPathError(error) ? false : defaultCaseInsensitiveFilesystem();
-  } finally {
-    await rm(probeDirectory, { force: true, recursive: true });
-  }
+  void projectRoot;
+  return defaultCaseInsensitiveFilesystem();
 }
 
 function defaultCaseInsensitiveFilesystem(): boolean {
   return process.platform === "win32" || process.platform === "darwin";
-}
-
-async function createCaseProbeDirectory(projectRoot: string): Promise<string | undefined> {
-  try {
-    return await mkdtemp(path.join(projectRoot, ".cognitive-typescript-case-"));
-  } catch {
-    return undefined;
-  }
 }
 
 function isFilesystemRoot(filePath: string): boolean {

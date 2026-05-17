@@ -7,7 +7,7 @@ import { COGNITIVE_COMPLEXITY_THRESHOLD, validateThreshold } from "./constants";
 import { formatAnalysisReport } from "./report";
 import { validateReportPathTargets } from "./reportPaths";
 import { writeLine } from "./utils";
-import type { CliArguments, ReportFormat, Writer } from "./types";
+import type { AnalysisCliArguments, CliArguments, ReportFormat, Writer } from "./types";
 
 const REPORT_FORMATS = ["toon", "json", "text", "junit", "none"] as const;
 const REPORT_FORMAT_LIST = REPORT_FORMATS.join(", ");
@@ -110,7 +110,7 @@ const OPTION_HANDLERS: Record<string, OptionHandler> = {
   },
   "--format": (state, args, index, value) => {
     ensureOptionIsUnique(state.formatSeen, "--format");
-    state.format = parseReportFormat(optionValue(args, index, value, "--format", "one of: toon, json, text, junit, none"));
+    state.format = parseReportFormatOption(args, index, value);
     state.formatSeen = true;
     return value === undefined ? index + 1 : index;
   },
@@ -185,12 +185,18 @@ function ensureOptionIsUnique(seen: boolean, option: string): void {
 }
 
 function finalizeCliArguments(state: ParseState): CliArguments {
+  if (state.help) {
+    return {
+      mode: "help",
+      fileArgs: []
+    };
+  }
   applyAgentDefaults(state);
   validateCliState(state);
 
   return {
     mode: cliMode(state),
-    fileArgs: state.help ? [] : state.fileArgs,
+    fileArgs: state.fileArgs,
     format: state.format,
     threshold: state.threshold,
     agent: state.agent,
@@ -219,18 +225,18 @@ function validateCliState(state: ParseState): void {
   }
 }
 
-function cliMode(state: ParseState): CliArguments["mode"] {
-  if (state.help) {
-    return "help";
-  }
+function cliMode(state: ParseState): AnalysisCliArguments["mode"] {
   if (state.changed) {
     return "changed";
   }
   return state.fileArgs.length > 0 ? "explicit" : "all";
 }
 
-function optionalPath<K extends "output" | "junitReport">(key: K, value: string | undefined): Pick<CliArguments, K> | {} {
-  return value === undefined ? {} : { [key]: value } as Pick<CliArguments, K>;
+function optionalPath<K extends "output" | "junitReport">(
+  key: K,
+  value: string | undefined
+): Partial<Pick<AnalysisCliArguments, K>> {
+  return value === undefined ? {} : { [key]: value } as Pick<AnalysisCliArguments, K>;
 }
 
 function parseReportFormat(value: string | undefined): ReportFormat {
@@ -314,13 +320,17 @@ function parsePathOption(value: string, option: string): string {
   return value;
 }
 
+function parseReportFormatOption(args: string[], index: number, inlineValue: string | undefined): ReportFormat {
+  return parseReportFormat(optionValue(args, index, inlineValue, "--format", "a format"));
+}
+
 export async function runCli(
   args: string[],
   projectRoot = process.cwd(),
   stdout: Writer = process.stdout,
   stderr: Writer = process.stderr
 ): Promise<number> {
-  const parsed = parseCliInputs(args, stdout, stderr);
+  const parsed = parseCliInputs(args, stderr);
   if (typeof parsed === "number") {
     return parsed;
   }
@@ -347,18 +357,18 @@ export async function runCli(
   );
 }
 
-function parseCliInputs(args: string[], stdout: Writer, stderr: Writer): CliArguments | number {
+function parseCliInputs(args: string[], stderr: Writer): CliArguments | number {
   try {
     return parseCliArguments(args);
   } catch (error) {
     writeLine(stderr, (error as Error).message);
-    writeLine(stdout, usage());
+    writeLine(stderr, usage());
     return 1;
   }
 }
 
 async function analyzeCliProject(
-  parsed: CliArguments,
+  parsed: AnalysisCliArguments,
   projectRoot: string,
   stderr: Writer
 ) {
@@ -378,7 +388,7 @@ async function analyzeCliProject(
 
 async function handleCliResult(
   result: Awaited<ReturnType<typeof analyzeProject>> | null,
-  parsed: CliArguments,
+  parsed: AnalysisCliArguments,
   projectRoot: string,
   stdout: Writer,
   stderr: Writer,
@@ -388,7 +398,7 @@ async function handleCliResult(
     return 1;
   }
 
-  const elapsedSeconds = Math.max((performance.now() - startedAt) / 1000, Number.EPSILON);
+  const elapsedSeconds = (performance.now() - startedAt) / 1000;
   try {
     await writeCliReports(result, parsed, projectRoot, stdout, elapsedSeconds);
   } catch (error) {
@@ -401,7 +411,7 @@ async function handleCliResult(
 
 async function writeCliReports(
   result: Awaited<ReturnType<typeof analyzeProject>>,
-  parsed: CliArguments,
+  parsed: AnalysisCliArguments,
   projectRoot: string,
   stdout: Writer,
   elapsedSeconds: number
@@ -429,7 +439,7 @@ async function writeCliReports(
   }
 }
 
-async function validateCliReportPaths(parsed: CliArguments, projectRoot: string): Promise<void> {
+async function validateCliReportPaths(parsed: AnalysisCliArguments, projectRoot: string): Promise<void> {
   await validateReportPathTargets(projectRoot, [
     { label: "--output", path: parsed.output },
     { label: "--junit-report", path: parsed.junitReport }
@@ -438,8 +448,17 @@ async function validateCliReportPaths(parsed: CliArguments, projectRoot: string)
 
 async function writeReportFile(projectRoot: string, reportPath: string, content: string): Promise<void> {
   const absolutePath = path.resolve(projectRoot, reportPath);
+  assertInsideProjectRoot(path.resolve(projectRoot), absolutePath);
   await mkdir(path.dirname(absolutePath), { recursive: true });
   await writeFile(absolutePath, content);
+}
+
+function assertInsideProjectRoot(projectRoot: string, candidatePath: string): void {
+  const relativePath = path.relative(projectRoot, candidatePath);
+  if (relativePath === "" || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath))) {
+    return;
+  }
+  throw new Error("Report path must stay inside the project root");
 }
 
 function writeCliThresholdStatus(

@@ -156,6 +156,12 @@ describe("report formatting", () => {
     expect(output).toContain("Source: src/quoted&amp;file.ts:1-3");
   });
 
+  it("rounds tiny positive JUnit elapsed times up to a visible non-zero value", () => {
+    const output = formatJunitReport(buildAnalysisReport([metric()]), false, Number.EPSILON);
+
+    expect(output).toContain('time="0.000001"');
+  });
+
   it("returns empty content for none reports after validating the threshold", () => {
     expect(formatAnalysisReport([metric()], { format: "none" })).toBe("");
     expect(() => formatAnalysisReport([], { format: "none", threshold: 0 })).toThrow(

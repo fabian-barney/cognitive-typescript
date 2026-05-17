@@ -1,7 +1,6 @@
 export type CliMode = "all" | "changed" | "explicit" | "help";
 export type ReportFormat = "toon" | "json" | "text" | "junit" | "none";
 export type ReportStatus = "passed" | "failed";
-export type MethodReportStatus = ReportStatus;
 
 export interface SourceSpan {
   startLine: number;
@@ -14,8 +13,13 @@ export interface Writer {
   write(chunk: string): unknown;
 }
 
-export interface CliArguments {
-  mode: CliMode;
+export interface HelpCliArguments {
+  mode: "help";
+  fileArgs: string[];
+}
+
+export interface AnalysisCliArguments {
+  mode: Exclude<CliMode, "help">;
   fileArgs: string[];
   format: ReportFormat;
   threshold: number;
@@ -25,6 +29,8 @@ export interface CliArguments {
   output?: string;
   junitReport?: string;
 }
+
+export type CliArguments = HelpCliArguments | AnalysisCliArguments;
 
 export interface MethodDescriptor {
   functionName: string;

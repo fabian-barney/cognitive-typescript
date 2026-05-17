@@ -19,9 +19,10 @@ export {
 } from "./constants";
 export type {
   AnalysisResult,
+  AnalysisCliArguments,
   AnalyzeProjectOptions,
   CliArguments,
-  MethodReportStatus,
+  HelpCliArguments,
   MethodDescriptor,
   MethodMetrics,
   ReportFormat,
