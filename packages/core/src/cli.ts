@@ -5,7 +5,7 @@ import { performance } from "node:perf_hooks";
 import { analyzeProject } from "./analyzeProject";
 import { COGNITIVE_COMPLEXITY_THRESHOLD, validateThreshold } from "./constants";
 import { formatAnalysisReport } from "./report";
-import { validateReportPathTargets } from "./reportPaths";
+import { assertInsideProjectRoot, validateReportPathTargets } from "./reportPaths";
 import { writeLine } from "./utils";
 import type { AnalysisCliArguments, CliArguments, ReportFormat, Writer } from "./types";
 
@@ -185,6 +185,7 @@ function ensureOptionIsUnique(seen: boolean, option: string): void {
 }
 
 function finalizeCliArguments(state: ParseState): CliArguments {
+  validateHelpIsStandalone(state);
   if (state.help) {
     return {
       mode: "help",
@@ -222,6 +223,25 @@ function validateCliState(state: ParseState): void {
   }
   if (state.changed && state.fileArgs.length > 0) {
     throw new Error("--changed cannot be combined with file arguments");
+  }
+}
+
+function validateHelpIsStandalone(state: ParseState): void {
+  if (!state.help) {
+    return;
+  }
+  if (
+    state.changedSeen
+    || state.formatSeen
+    || state.thresholdSeen
+    || state.agentSeen
+    || state.failuresOnlySeen
+    || state.omitRedundancySeen
+    || state.outputSeen
+    || state.junitReportSeen
+    || state.fileArgs.length > 0
+  ) {
+    throw new Error("--help cannot be combined with other options or file arguments");
   }
 }
 
@@ -310,12 +330,20 @@ function optionValue(
   if (index + 1 >= args.length) {
     throw new Error(`${option} requires ${valueDescription}`);
   }
-  return args[index + 1];
+  const separatedValue = args[index + 1];
+  if (separatedValue.startsWith("--")) {
+    throw new Error(`${option} requires ${valueDescription}`);
+  }
+  return separatedValue;
 }
 
 function parsePathOption(value: string, option: string): string {
-  if (value.trim() === "") {
+  const trimmedValue = value.trim();
+  if (trimmedValue === "") {
     throw new Error(`${option} requires a path`);
+  }
+  if (trimmedValue !== value) {
+    throw new Error(`${option} must not include leading or trailing whitespace`);
   }
   return value;
 }
@@ -448,17 +476,9 @@ async function validateCliReportPaths(parsed: AnalysisCliArguments, projectRoot:
 
 async function writeReportFile(projectRoot: string, reportPath: string, content: string): Promise<void> {
   const absolutePath = path.resolve(projectRoot, reportPath);
-  assertInsideProjectRoot(path.resolve(projectRoot), absolutePath);
+  assertInsideProjectRoot(path.resolve(projectRoot), absolutePath, "Report path");
   await mkdir(path.dirname(absolutePath), { recursive: true });
   await writeFile(absolutePath, content);
-}
-
-function assertInsideProjectRoot(projectRoot: string, candidatePath: string): void {
-  const relativePath = path.relative(projectRoot, candidatePath);
-  if (relativePath === "" || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath))) {
-    return;
-  }
-  throw new Error("Report path must stay inside the project root");
 }
 
 function writeCliThresholdStatus(

@@ -47,6 +47,9 @@ describe("cli", () => {
     );
     expect(() => parseCliArguments(["--format"])).toThrow("--format requires a format");
     expect(() => parseCliArguments(["--format="])).toThrow("--format requires a format");
+    expect(() => parseCliArguments(["--format", "--agent"])).toThrow("--format requires a format");
+    expect(() => parseCliArguments(["--output", "--agent"])).toThrow("--output requires a path");
+    expect(() => parseCliArguments(["--threshold", "--agent"])).toThrow("--threshold requires a positive integer");
     expect(() => parseCliArguments(["--failures-only=True"])).toThrow(
       "--failures-only requires true or false when a value is provided"
     );
@@ -55,6 +58,15 @@ describe("cli", () => {
     );
     expect(() => parseCliArguments(["--threshold", "1.5"])).toThrow("--threshold requires a positive integer");
     expect(() => parseCliArguments(["--output="])).toThrow("--output requires a path");
+    expect(() => parseCliArguments(["--output", " reports/primary.json "])).toThrow(
+      "--output must not include leading or trailing whitespace"
+    );
+    expect(() => parseCliArguments(["--help", "--changed"])).toThrow(
+      "--help cannot be combined with other options or file arguments"
+    );
+    expect(() => parseCliArguments(["--help", "src"])).toThrow(
+      "--help cannot be combined with other options or file arguments"
+    );
   });
 
   it("applies agent defaults and explicit overrides", () => {

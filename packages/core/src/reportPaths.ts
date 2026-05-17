@@ -51,9 +51,7 @@ async function resolveReportPathTarget(
   if (absolutePath === projectRoot) {
     throw new Error(`${target.label} must target a report file, not the project root`);
   }
-  if (!isInsidePath(projectRoot, absolutePath)) {
-    throw new Error(`${target.label} must stay inside the project root`);
-  }
+  assertInsideProjectRoot(projectRoot, absolutePath, target.label);
 
   const stats = await statIfExists(absolutePath);
   if (stats?.isDirectory()) {
@@ -87,9 +85,15 @@ async function caseInsensitiveFilesystemForTarget(
   if (cached !== undefined) {
     return cached;
   }
-  const caseInsensitiveFilesystem = await isCaseInsensitiveFilesystem(parent);
+  const caseInsensitiveFilesystem = defaultCaseInsensitiveFilesystem();
   filesystemCaseCache.set(parent, caseInsensitiveFilesystem);
   return caseInsensitiveFilesystem;
+}
+
+export function assertInsideProjectRoot(projectRoot: string, candidatePath: string, label: string): void {
+  if (!isInsidePath(projectRoot, candidatePath)) {
+    throw new Error(`${label} must stay inside the project root`);
+  }
 }
 
 async function statIfExists(filePath: string): Promise<Awaited<ReturnType<typeof stat>> | undefined> {
@@ -156,11 +160,6 @@ async function nearestExistingParent(directoryPath: string): Promise<string> {
 function normalizeReportPathForCollision(filePath: string, caseInsensitiveFilesystem: boolean): string {
   const normalized = path.normalize(filePath);
   return caseInsensitiveFilesystem ? normalized.toLowerCase() : normalized;
-}
-
-async function isCaseInsensitiveFilesystem(projectRoot: string): Promise<boolean> {
-  void projectRoot;
-  return defaultCaseInsensitiveFilesystem();
 }
 
 function defaultCaseInsensitiveFilesystem(): boolean {
