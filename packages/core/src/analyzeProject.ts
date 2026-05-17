@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { COGNITIVE_COMPLEXITY_THRESHOLD } from "./constants";
+import { COGNITIVE_COMPLEXITY_THRESHOLD, validateThreshold } from "./constants";
 import { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots } from "./fileSelection";
 import { analyzeTypeScriptFiles } from "./parser";
 import { toRelativePath } from "./utils";
@@ -8,9 +8,10 @@ import type { AnalysisResult, AnalyzeProjectOptions, MethodMetrics } from "./typ
 
 export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promise<AnalysisResult> {
   const projectRoot = path.resolve(options.projectRoot ?? process.cwd());
+  const threshold = validateThreshold(options.threshold ?? COGNITIVE_COMPLEXITY_THRESHOLD);
   const selectedFiles = await selectFiles(projectRoot, options.explicitPaths ?? [], options.changedOnly ?? false);
   if (selectedFiles.length === 0) {
-    return emptyAnalysisResult();
+    return emptyAnalysisResult(threshold);
   }
 
   const parsedFiles = await analyzeTypeScriptFiles(selectedFiles);
@@ -31,16 +32,18 @@ export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promi
   return {
     metrics,
     maxCognitiveComplexity,
-    thresholdExceeded: maxCognitiveComplexity > COGNITIVE_COMPLEXITY_THRESHOLD,
+    threshold,
+    thresholdExceeded: maxCognitiveComplexity > threshold,
     selectedFiles,
     warnings: []
   };
 }
 
-function emptyAnalysisResult(): AnalysisResult {
+function emptyAnalysisResult(threshold: number): AnalysisResult {
   return {
     metrics: [],
     maxCognitiveComplexity: 0,
+    threshold,
     thresholdExceeded: false,
     selectedFiles: [],
     warnings: []

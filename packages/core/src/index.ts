@@ -2,7 +2,16 @@ export { analyzeProject } from "./analyzeProject";
 export { runCli, parseCliArguments, usage } from "./cli";
 export { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots, isAnalyzableFile } from "./fileSelection";
 export { parseFileMethods } from "./parser";
-export { formatReport, sortMetrics } from "./report";
+export {
+  buildAgentAnalysisReport,
+  buildAnalysisReport,
+  formatAnalysisReport,
+  formatJunitReport,
+  formatReport,
+  formatTextReport,
+  formatToonReport,
+  sortMetrics
+} from "./report";
 export {
   COGNITIVE_COMPLEXITY_THRESHOLD,
   NO_FILES_MESSAGE,
@@ -12,7 +21,17 @@ export type {
   AnalysisResult,
   AnalyzeProjectOptions,
   CliArguments,
+  MethodReportStatus,
   MethodDescriptor,
   MethodMetrics,
+  ReportFormat,
+  ReportStatus,
   Writer
 } from "./types";
+export type {
+  AnalysisReport,
+  CompactAnalysisReport,
+  CompactMethodReportEntry,
+  FormatAnalysisReportOptions,
+  MethodReportEntry
+} from "./report";
