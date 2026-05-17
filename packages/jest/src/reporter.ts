@@ -1,7 +1,6 @@
-import path from "node:path";
-
 import {
   analyzeProject,
+  DEFAULT_JUNIT_REPORT,
   deleteOwnedReportFile,
   NO_ANALYZABLE_FUNCTIONS_MESSAGE,
   NO_FILES_MESSAGE,
@@ -9,25 +8,9 @@ import {
   resolveReporterReportOptions,
   validateReportPathTargets
 } from "@barney-media/cognitive-typescript-core";
-import type { ReportFormat, ResolvedReporterReportOptions, Writer } from "@barney-media/cognitive-typescript-core";
+import type { ReporterReportOptions, ResolvedReporterReportOptions } from "@barney-media/cognitive-typescript-core";
 
-export interface CognitiveTypescriptJestOptions {
-  projectRoot?: string;
-  changedOnly?: boolean;
-  paths?: string[];
-  format?: ReportFormat;
-  agent?: boolean;
-  failuresOnly?: boolean;
-  omitRedundancy?: boolean;
-  output?: string;
-  junit?: boolean;
-  junitReport?: string;
-  threshold?: number;
-  stdout?: Writer;
-  stderr?: Writer;
-}
-
-const DEFAULT_JUNIT_REPORT = path.join("reports", "cognitive-typescript", "TEST-cognitive-typescript.xml");
+export interface CognitiveTypescriptJestOptions extends ReporterReportOptions {}
 
 export default class CognitiveTypescriptJestReporter {
   private error: Error | undefined;

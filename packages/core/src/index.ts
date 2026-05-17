@@ -13,7 +13,7 @@ export {
   sortMetrics
 } from "./report";
 export { deleteOwnedReportFile, publishAnalysisReports } from "./reportPublishing";
-export { resolveReporterReportOptions } from "./reporterOptions";
+export { DEFAULT_JUNIT_REPORT, resolveReporterReportOptions } from "./reporterOptions";
 export { validateReportPathTargets } from "./reportPaths";
 export {
   COGNITIVE_COMPLEXITY_THRESHOLD,
