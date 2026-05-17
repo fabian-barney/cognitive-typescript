@@ -2,14 +2,14 @@ import path from "node:path";
 
 import {
   analyzeProject,
-  COGNITIVE_COMPLEXITY_THRESHOLD,
   deleteOwnedReportFile,
   NO_ANALYZABLE_FUNCTIONS_MESSAGE,
   NO_FILES_MESSAGE,
   publishAnalysisReports,
+  resolveReporterReportOptions,
   validateReportPathTargets
 } from "@barney-media/cognitive-typescript-core";
-import type { ReportFormat, Writer } from "@barney-media/cognitive-typescript-core";
+import type { ReportFormat, ResolvedReporterReportOptions, Writer } from "@barney-media/cognitive-typescript-core";
 
 export interface CognitiveTypescriptJestOptions {
   projectRoot?: string;
@@ -25,22 +25,6 @@ export interface CognitiveTypescriptJestOptions {
   threshold?: number;
   stdout?: Writer;
   stderr?: Writer;
-}
-
-interface ResolvedReporterOptions {
-  projectRoot: string;
-  paths: string[];
-  changedOnly: boolean;
-  format: ReportFormat;
-  agent: boolean;
-  failuresOnly: boolean | undefined;
-  omitRedundancy: boolean | undefined;
-  output: string | undefined;
-  junit: boolean;
-  junitReport: string;
-  threshold: number;
-  stdout: Writer;
-  stderr: Writer;
 }
 
 const DEFAULT_JUNIT_REPORT = path.join("reports", "cognitive-typescript", "TEST-cognitive-typescript.xml");
@@ -119,23 +103,8 @@ export default class CognitiveTypescriptJestReporter {
   }
 }
 
-function resolveReporterOptions(options: CognitiveTypescriptJestOptions): ResolvedReporterOptions {
-  const agent = options.agent ?? false;
-  return {
-    projectRoot: options.projectRoot ?? process.cwd(),
-    paths: options.paths ?? [],
-    changedOnly: options.changedOnly ?? false,
-    format: options.format ?? (agent ? "toon" : "none"),
-    agent,
-    failuresOnly: options.failuresOnly,
-    omitRedundancy: options.omitRedundancy,
-    output: options.output,
-    junit: options.junit ?? true,
-    junitReport: options.junitReport ?? DEFAULT_JUNIT_REPORT,
-    threshold: options.threshold ?? COGNITIVE_COMPLEXITY_THRESHOLD,
-    stdout: options.stdout ?? process.stdout,
-    stderr: options.stderr ?? process.stderr
-  };
+function resolveReporterOptions(options: CognitiveTypescriptJestOptions): ResolvedReporterReportOptions {
+  return resolveReporterReportOptions(options, DEFAULT_JUNIT_REPORT);
 }
 
 function toError(error: unknown): Error {

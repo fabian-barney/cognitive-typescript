@@ -79,3 +79,35 @@ export interface PublishAnalysisReportsOptions {
   junitReport?: string;
   elapsedSeconds?: number;
 }
+
+export interface ReporterReportOptions {
+  projectRoot?: string;
+  changedOnly?: boolean;
+  paths?: string[];
+  format?: ReportFormat;
+  agent?: boolean;
+  failuresOnly?: boolean;
+  omitRedundancy?: boolean;
+  output?: string;
+  junit?: boolean;
+  junitReport?: string;
+  threshold?: number;
+  stdout?: Writer;
+  stderr?: Writer;
+}
+
+export interface ResolvedReporterReportOptions {
+  projectRoot: string;
+  paths: string[];
+  changedOnly: boolean;
+  format: ReportFormat;
+  agent: boolean;
+  failuresOnly: boolean | undefined;
+  omitRedundancy: boolean | undefined;
+  output: string | undefined;
+  junit: boolean;
+  junitReport: string;
+  threshold: number;
+  stdout: Writer;
+  stderr: Writer;
+}
