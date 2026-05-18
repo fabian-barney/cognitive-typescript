@@ -1,11 +1,14 @@
 import {
   analyzeProject,
-  COGNITIVE_COMPLEXITY_THRESHOLD,
-  formatReport,
+  DEFAULT_JUNIT_REPORT,
+  deleteOwnedReportFile,
   NO_ANALYZABLE_FUNCTIONS_MESSAGE,
-  NO_FILES_MESSAGE
+  NO_FILES_MESSAGE,
+  publishAnalysisReports,
+  resolveReporterReportOptions,
+  validateReportPathTargets
 } from "@barney-media/cognitive-typescript-core";
-import type { Writer } from "@barney-media/cognitive-typescript-core";
+import type { ReporterReportOptions, ResolvedReporterReportOptions } from "@barney-media/cognitive-typescript-core";
 
 type VitestReporterEntry = string | [string, unknown] | {
   onTestRunEnd?: () => Promise<void>;
@@ -18,21 +21,7 @@ type VitestConfig = Record<string, unknown> & {
   };
 };
 
-export interface CognitiveTypescriptVitestOptions {
-  projectRoot?: string;
-  changedOnly?: boolean;
-  paths?: string[];
-  stdout?: Writer;
-  stderr?: Writer;
-}
-
-interface ResolvedReporterOptions {
-  projectRoot: string;
-  paths: string[];
-  changedOnly: boolean;
-  stdout: Writer;
-  stderr: Writer;
-}
+export interface CognitiveTypescriptVitestOptions extends ReporterReportOptions {}
 
 export class CognitiveTypescriptVitestReporter {
   private finalizePromise: Promise<void> | null = null;
@@ -56,26 +45,51 @@ export class CognitiveTypescriptVitestReporter {
 
   private async finalize(): Promise<void> {
     const options = resolveReporterOptions(this.options);
-    const result = await analyzeProject({
-      projectRoot: options.projectRoot,
-      explicitPaths: options.paths,
-      changedOnly: options.changedOnly
-    });
+    try {
+      await validateReportPathTargets(options.projectRoot, [
+        { label: "--output", path: options.output },
+        { label: "--junit-report", path: options.junit ? options.junitReport : undefined }
+      ]);
+      if (!options.junit) {
+        await deleteOwnedReportFile(options.projectRoot, options.junitReport);
+      }
 
-    if (result.selectedFiles.length === 0) {
-      options.stdout.write(`${NO_FILES_MESSAGE}\n`);
-      return;
-    }
-    if (result.metrics.length === 0) {
-      options.stdout.write(`${NO_ANALYZABLE_FUNCTIONS_MESSAGE}\n`);
-      return;
-    }
+      const result = await analyzeProject({
+        projectRoot: options.projectRoot,
+        explicitPaths: options.paths,
+        changedOnly: options.changedOnly,
+        threshold: options.threshold
+      });
 
-    options.stdout.write(`${formatReport(result.metrics)}\n`);
-    if (result.thresholdExceeded) {
-      options.stderr.write(
-        `Cognitive Complexity threshold exceeded: ${result.maxCognitiveComplexity} > ${COGNITIVE_COMPLEXITY_THRESHOLD}\n`
-      );
+      if (result.selectedFiles.length === 0) {
+        options.stdout.write(`${NO_FILES_MESSAGE}\n`);
+        return;
+      }
+      if (result.metrics.length === 0) {
+        options.stdout.write(`${NO_ANALYZABLE_FUNCTIONS_MESSAGE}\n`);
+        return;
+      }
+
+      await publishAnalysisReports({
+        projectRoot: options.projectRoot,
+        stdout: options.stdout,
+        metrics: result.metrics,
+        format: options.format,
+        agent: options.agent,
+        threshold: result.threshold,
+        failuresOnly: options.failuresOnly,
+        omitRedundancy: options.omitRedundancy,
+        output: options.output,
+        junitReport: options.junit ? options.junitReport : undefined
+      });
+      if (result.thresholdExceeded) {
+        options.stderr.write(
+          `Cognitive Complexity threshold exceeded: ${result.maxCognitiveComplexity} > ${result.threshold}\n`
+        );
+        process.exitCode = 2;
+      }
+    } catch (error) {
+      options.stderr.write(`${toError(error).message}\n`);
       process.exitCode = 1;
     }
   }
@@ -98,14 +112,8 @@ export function withCognitiveTypescriptVitest(
   };
 }
 
-function resolveReporterOptions(options: CognitiveTypescriptVitestOptions): ResolvedReporterOptions {
-  return {
-    projectRoot: options.projectRoot ?? process.cwd(),
-    paths: options.paths ?? [],
-    changedOnly: options.changedOnly ?? false,
-    stdout: options.stdout ?? process.stdout,
-    stderr: options.stderr ?? process.stderr
-  };
+function resolveReporterOptions(options: CognitiveTypescriptVitestOptions): ResolvedReporterReportOptions {
+  return resolveReporterReportOptions(options, DEFAULT_JUNIT_REPORT);
 }
 
 function asArray<T>(value: T | T[] | undefined): T[] {
@@ -123,4 +131,8 @@ function ensureDefaultReporter(existing: VitestReporterEntry[]): VitestReporterE
     return ["default", ...existing];
   }
   return existing;
+}
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
 }

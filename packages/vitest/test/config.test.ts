@@ -29,4 +29,27 @@ describe("withCognitiveTypescriptVitest", () => {
       expect.any(CognitiveTypescriptVitestReporter)
     ]);
   });
+
+  it("forwards options without mutating coverage settings", () => {
+    const options = {
+      format: "json" as const,
+      junit: false,
+      threshold: 9
+    };
+    const config = withCognitiveTypescriptVitest(
+      {
+        test: {
+          coverage: {
+            provider: "v8"
+          }
+        }
+      },
+      options
+    );
+
+    expect(config.test?.coverage).toEqual({ provider: "v8" });
+    const reporters = config.test?.reporters as unknown[];
+    const reporter = reporters[1] as CognitiveTypescriptVitestReporter & { options: unknown };
+    expect(reporter.options).toEqual(options);
+  });
 });

@@ -1,11 +1,9 @@
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 
 import { analyzeProject } from "./analyzeProject";
 import { COGNITIVE_COMPLEXITY_THRESHOLD, validateThreshold } from "./constants";
-import { formatAnalysisReport } from "./report";
-import { assertInsideProjectRoot, validateReportPathTargets } from "./reportPaths";
+import { publishAnalysisReports } from "./reportPublishing";
 import { writeLine } from "./utils";
 import type { AnalysisCliArguments, CliArguments, ReportFormat, Writer } from "./types";
 
@@ -368,13 +366,6 @@ export async function runCli(
     return 0;
   }
 
-  try {
-    await validateCliReportPaths(parsed, projectRoot);
-  } catch (error) {
-    writeLine(stderr, (error as Error).message);
-    return 1;
-  }
-
   const startedAt = performance.now();
   return handleCliResult(
     await analyzeCliProject(parsed, projectRoot, stderr),
@@ -445,40 +436,19 @@ async function writeCliReports(
   stdout: Writer,
   elapsedSeconds: number
 ): Promise<void> {
-  const primaryReport = formatAnalysisReport(result.metrics, {
+  await publishAnalysisReports({
+    projectRoot,
+    stdout,
+    metrics: result.metrics,
     format: parsed.format,
+    agent: parsed.agent,
     threshold: result.threshold,
     failuresOnly: parsed.failuresOnly,
     omitRedundancy: parsed.omitRedundancy,
+    output: parsed.output,
+    junitReport: parsed.junitReport,
     elapsedSeconds
   });
-  if (parsed.output) {
-    await writeReportFile(projectRoot, parsed.output, primaryReport);
-  } else if (primaryReport.length > 0) {
-    stdout.write(primaryReport);
-  }
-
-  if (parsed.junitReport) {
-    await writeReportFile(projectRoot, parsed.junitReport, formatAnalysisReport(result.metrics, {
-      format: "junit",
-      threshold: result.threshold,
-      elapsedSeconds
-    }));
-  }
-}
-
-async function validateCliReportPaths(parsed: AnalysisCliArguments, projectRoot: string): Promise<void> {
-  await validateReportPathTargets(projectRoot, [
-    { label: "--output", path: parsed.output },
-    { label: "--junit-report", path: parsed.junitReport }
-  ]);
-}
-
-async function writeReportFile(projectRoot: string, reportPath: string, content: string): Promise<void> {
-  const absolutePath = path.resolve(projectRoot, reportPath);
-  assertInsideProjectRoot(path.resolve(projectRoot), absolutePath, "Report path");
-  await mkdir(path.dirname(absolutePath), { recursive: true });
-  await writeFile(absolutePath, content);
 }
 
 function writeCliThresholdStatus(

@@ -1,17 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import type { Writer } from "@barney-media/cognitive-typescript-core";
-
-import CognitiveTypescriptJestReporter from "./reporter";
-
-export interface CognitiveTypescriptJestOptions {
-  projectRoot?: string;
-  changedOnly?: boolean;
-  paths?: string[];
-  stdout?: Writer;
-  stderr?: Writer;
-}
+import CognitiveTypescriptJestReporter, { type CognitiveTypescriptJestOptions } from "./reporter";
 
 type JestReporterEntry = string | [string, unknown];
 
@@ -31,6 +21,7 @@ export function withCognitiveTypescriptJest(
 }
 
 export { CognitiveTypescriptJestReporter };
+export type { CognitiveTypescriptJestOptions };
 export default CognitiveTypescriptJestReporter;
 
 function asArray<T>(value: T[] | T | undefined): T[] {

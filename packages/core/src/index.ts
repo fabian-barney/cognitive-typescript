@@ -12,6 +12,9 @@ export {
   formatToonReport,
   sortMetrics
 } from "./report";
+export { deleteOwnedReportFile, publishAnalysisReports } from "./reportPublishing";
+export { DEFAULT_JUNIT_REPORT, resolveReporterReportOptions } from "./reporterOptions";
+export { validateReportPathTargets } from "./reportPaths";
 export {
   COGNITIVE_COMPLEXITY_THRESHOLD,
   NO_FILES_MESSAGE,
@@ -25,7 +28,10 @@ export type {
   HelpCliArguments,
   MethodDescriptor,
   MethodMetrics,
+  PublishAnalysisReportsOptions,
+  ReporterReportOptions,
   ReportFormat,
+  ResolvedReporterReportOptions,
   ReportStatus,
   Writer
 } from "./types";
