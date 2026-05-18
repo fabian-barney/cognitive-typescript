@@ -11,7 +11,5 @@ export function validateThreshold(value: number): number {
 
 export const IGNORED_DIRECTORIES = new Set([
   ".git",
-  "coverage",
-  "dist",
   "node_modules"
 ]);

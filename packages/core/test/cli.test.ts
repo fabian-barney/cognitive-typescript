@@ -23,6 +23,15 @@ describe("cli", () => {
       "--agent",
       "--failures-only=false",
       "--omit-redundancy=false",
+      "--exclude=packages/generated/**",
+      "--exclude",
+      "src/legacy/**",
+      "--exclude-name",
+      ".*Factory$",
+      "--exclude-decorator=@Generated",
+      "--exclude-comment",
+      "@manual-generated",
+      "--use-default-exclusions=false",
       "--output",
       "reports/primary.json",
       "--junit-report=reports/junit.xml",
@@ -36,6 +45,11 @@ describe("cli", () => {
       agent: true,
       failuresOnly: false,
       omitRedundancy: false,
+      excludes: ["packages/generated/**", "src/legacy/**"],
+      excludeNames: [".*Factory$"],
+      excludeDecorators: ["@Generated"],
+      excludeComments: ["@manual-generated"],
+      useDefaultExclusions: false,
       output: "reports/primary.json",
       junitReport: "reports/junit.xml"
     });
@@ -50,6 +64,15 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--format", "--agent"])).toThrow("--format requires a format");
     expect(() => parseCliArguments(["--output", "--agent"])).toThrow("--output requires a path");
     expect(() => parseCliArguments(["--threshold", "--agent"])).toThrow("--threshold requires a positive integer");
+    expect(() => parseCliArguments(["--exclude"])).toThrow("--exclude requires a glob");
+    expect(() => parseCliArguments(["--exclude-name="])).toThrow("--exclude-name requires a regex");
+    expect(() => parseCliArguments(["--exclude-decorator", " decorator"])).toThrow(
+      "--exclude-decorator must not include leading or trailing whitespace"
+    );
+    expect(() => parseCliArguments(["--exclude-comment", ""])).toThrow("--exclude-comment requires a comment marker");
+    expect(() => parseCliArguments(["--use-default-exclusions=TRUE"])).toThrow(
+      "--use-default-exclusions requires true or false when a value is provided"
+    );
     expect(() => parseCliArguments(["--failures-only=True"])).toThrow(
       "--failures-only requires true or false when a value is provided"
     );
@@ -96,7 +119,17 @@ describe("cli", () => {
     const exitCode = await runCli([], projectRoot, stdout, stderr);
 
     expect(exitCode).toBe(0);
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 15\nmethods[0]:\n");
+    expect(stdout.toString()).toBe(
+      "status: passed\n"
+      + "threshold: 15\n"
+      + "methods[0]:\n"
+      + "exclusions:\n"
+      + "  discoveredFiles: 0\n"
+      + "  analyzedFiles: 0\n"
+      + "  analyzedFunctions: 0\n"
+      + "  excludedFiles: 0\n"
+      + "  excludedFunctions: 0\n"
+    );
     expect(stderr.toString()).toBe("");
   });
 

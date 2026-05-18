@@ -16,7 +16,7 @@ afterEach(async () => {
 });
 
 describe("file selection", () => {
-  it("finds TypeScript files under nested src roots and skips declarations and tests", async () => {
+  it("finds TypeScript files under nested src roots as analysis candidates", async () => {
     const projectRoot = await createTempDir("cognitive-files-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
@@ -36,7 +36,9 @@ describe("file selection", () => {
       "src/a.ts",
       "src/b.tsx",
       "src/c.mts",
-      "src/d.cts"
+      "src/d.cts",
+      "src/skip.d.ts",
+      "src/skip.test.ts"
     ]);
   });
 

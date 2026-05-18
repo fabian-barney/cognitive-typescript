@@ -16,6 +16,11 @@ export function resolveReporterReportOptions(
     projectRoot: optionOr(options.projectRoot, process.cwd()),
     paths: options.paths ?? [],
     changedOnly: optionOr(options.changedOnly, false),
+    excludes: normalizeListOption(options.excludes, "--exclude"),
+    excludeNames: normalizeListOption(options.excludeNames, "--exclude-name"),
+    excludeDecorators: normalizeListOption(options.excludeDecorators, "--exclude-decorator"),
+    excludeComments: normalizeListOption(options.excludeComments, "--exclude-comment"),
+    useDefaultExclusions: optionOr(options.useDefaultExclusions, true),
     format: resolveFormat(options.format, agent),
     agent,
     failuresOnly: options.failuresOnly,
@@ -52,4 +57,17 @@ function resolvePathOption(value: string | undefined, option: string): string | 
     throw new Error(`${option} must not include leading or trailing whitespace`);
   }
   return value;
+}
+
+function normalizeListOption(values: string[] | undefined, option: string): string[] {
+  return (values ?? []).map((value) => {
+    const trimmedValue = value.trim();
+    if (trimmedValue === "") {
+      throw new Error(`${option} requires a value`);
+    }
+    if (trimmedValue !== value) {
+      throw new Error(`${option} must not include leading or trailing whitespace`);
+    }
+    return value;
+  });
 }

@@ -2,6 +2,7 @@ export { analyzeProject } from "./analyzeProject";
 export { runCli, parseCliArguments, usage } from "./cli";
 export { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots, isAnalyzableFile } from "./fileSelection";
 export { parseFileMethods } from "./parser";
+export { resolveSourceExclusionOptions, SourceExclusionAuditBuilder, SourceExclusionMatcher } from "./sourceExclusions";
 export {
   buildAgentAnalysisReport,
   buildAnalysisReport,
@@ -33,8 +34,11 @@ export type {
   ReportFormat,
   ResolvedReporterReportOptions,
   ReportStatus,
+  SourceExclusionAudit,
+  SourceExclusionAuditCount,
   Writer
 } from "./types";
+export type { SourceExclusionCandidateMethod, SourceExclusionOptions } from "./sourceExclusions";
 export type {
   AnalysisReport,
   CompactAnalysisReport,

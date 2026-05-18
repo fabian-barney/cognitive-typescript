@@ -47,6 +47,11 @@ export default class CognitiveTypescriptJestReporter {
         projectRoot: options.projectRoot,
         explicitPaths: options.paths,
         changedOnly: options.changedOnly,
+        excludes: options.excludes,
+        excludeNames: options.excludeNames,
+        excludeDecorators: options.excludeDecorators,
+        excludeComments: options.excludeComments,
+        useDefaultExclusions: options.useDefaultExclusions,
         threshold: options.threshold
       });
 
@@ -66,8 +71,10 @@ export default class CognitiveTypescriptJestReporter {
         format: options.format,
         agent: options.agent,
         threshold: result.threshold,
+        exclusionAudit: result.exclusionAudit,
         failuresOnly: options.failuresOnly,
         omitRedundancy: options.omitRedundancy,
+        includePrimaryExclusionAudit: !options.agent,
         output: options.output,
         junitReport: options.junit ? options.junitReport : undefined
       });

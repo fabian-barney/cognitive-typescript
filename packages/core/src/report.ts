@@ -4,7 +4,8 @@ import { COGNITIVE_COMPLEXITY_THRESHOLD, validateThreshold } from "./constants";
 import type {
   MethodMetrics,
   ReportFormat,
-  ReportStatus
+  ReportStatus,
+  SourceExclusionAudit
 } from "./types";
 
 const METHOD_COLUMNS = ["status", "cc", "method", "src", "lineStart", "lineEnd"] as const;
@@ -26,12 +27,14 @@ export interface AnalysisReport {
   status: ReportStatus;
   threshold: number;
   methods: MethodReportEntry[];
+  exclusions?: SourceExclusionAudit;
 }
 
 export interface CompactAnalysisReport {
   status: ReportStatus;
   threshold: number;
   methods: CompactMethodReportEntry[];
+  exclusions?: SourceExclusionAudit;
 }
 
 export interface FormatAnalysisReportOptions {
@@ -41,6 +44,8 @@ export interface FormatAnalysisReportOptions {
   failuresOnly?: boolean;
   omitRedundancy?: boolean;
   elapsedSeconds?: number;
+  exclusionAudit?: SourceExclusionAudit;
+  includeExclusionAudit?: boolean;
 }
 
 type SerializableReport = AnalysisReport | CompactAnalysisReport;
@@ -79,20 +84,23 @@ export function sortMetrics(metrics: MethodMetrics[]): MethodMetrics[] {
 export function buildAnalysisReport(
   metrics: MethodMetrics[],
   threshold = COGNITIVE_COMPLEXITY_THRESHOLD,
-  filterToFailures = false
+  filterToFailures = false,
+  exclusions?: SourceExclusionAudit
 ): AnalysisReport {
   const validatedThreshold = validateThreshold(threshold);
   const allMethods = sortMetrics(metrics).map((metric) => toMethodReportEntry(metric, validatedThreshold));
   return {
     status: allMethods.some((method) => method.status === "failed") ? "failed" : "passed",
     threshold: validatedThreshold,
-    methods: filterToFailures ? allMethods.filter((method) => method.status === "failed") : allMethods
+    methods: filterToFailures ? allMethods.filter((method) => method.status === "failed") : allMethods,
+    ...optionalExclusions(exclusions)
   };
 }
 
 export function buildAgentAnalysisReport(
   metrics: MethodMetrics[],
-  threshold = COGNITIVE_COMPLEXITY_THRESHOLD
+  threshold = COGNITIVE_COMPLEXITY_THRESHOLD,
+  _exclusions?: SourceExclusionAudit
 ): CompactAnalysisReport {
   const report = buildAnalysisReport(metrics, threshold, true);
   return omitMethodStatuses(report);
@@ -104,7 +112,7 @@ export function formatAnalysisReport(metrics: MethodMetrics[], options: FormatAn
     return "";
   }
 
-  const report = buildAnalysisReport(metrics, prepared.threshold, prepared.failuresOnly);
+  const report = buildAnalysisReport(metrics, prepared.threshold, prepared.failuresOnly, prepared.exclusionAudit);
   const primaryReport = prepared.omitMethodStatus ? omitMethodStatuses(report) : report;
   return REPORT_FORMATTERS[prepared.format](primaryReport, prepared.omitRedundancy, prepared.elapsedSeconds);
 }
@@ -116,6 +124,7 @@ interface PreparedFormatRequest {
   omitMethodStatus: boolean;
   omitRedundancy: boolean;
   threshold: number;
+  exclusionAudit?: SourceExclusionAudit;
 }
 
 function prepareFormatRequest(options: FormatAnalysisReportOptions): PreparedFormatRequest {
@@ -128,7 +137,8 @@ function prepareFormatRequest(options: FormatAnalysisReportOptions): PreparedFor
     failuresOnly: options.failuresOnly ?? agent,
     omitRedundancy,
     omitMethodStatus: omitRedundancy && format !== "junit",
-    elapsedSeconds: options.elapsedSeconds ?? 0
+    elapsedSeconds: options.elapsedSeconds ?? 0,
+    exclusionAudit: options.includeExclusionAudit === false ? undefined : options.exclusionAudit
   };
 }
 
@@ -146,7 +156,7 @@ export function formatToonReport(report: SerializableReport, omitMethodStatus = 
 export function formatTextReport(report: SerializableReport, omitMethodStatus = false): string {
   const summary = [`status: ${report.status}`, `threshold: ${report.threshold}`];
   if (report.methods.length === 0) {
-    return `${summary.join("\n")}\nmethods[0]:\n`;
+    return [...summary, "methods[0]:", ...exclusionTextLines(report.exclusions)].join("\n") + "\n";
   }
 
   const includeStatus = !omitMethodStatus && reportHasMethodStatus(report);
@@ -163,7 +173,7 @@ export function formatTextReport(report: SerializableReport, omitMethodStatus = 
   const separator = formatTextSeparator(widths);
   const body = rows.map((row) => formatTextRow(row, widths, columns));
 
-  return [...summary, "", headerLine, separator, ...body].join("\n") + "\n";
+  return [...summary, "", headerLine, separator, ...body, ...exclusionTextLines(report.exclusions)].join("\n") + "\n";
 }
 
 export function formatJunitReport(
@@ -193,8 +203,13 @@ function omitMethodStatuses(report: AnalysisReport): CompactAnalysisReport {
   return {
     status: report.status,
     threshold: report.threshold,
-    methods: report.methods.map(({ status: _status, ...method }) => method)
+    methods: report.methods.map(({ status: _status, ...method }) => method),
+    ...optionalExclusions(report.exclusions)
   };
+}
+
+function optionalExclusions(exclusions: SourceExclusionAudit | undefined): { exclusions?: SourceExclusionAudit } {
+  return exclusions ? { exclusions } : {};
 }
 
 function compareStable(left: string, right: string): number {
@@ -236,7 +251,8 @@ function encodeToonReport(report: SerializableReport): string {
     `status: ${report.status}`,
     `threshold: ${report.threshold}`,
     `methods[${report.methods.length}]${report.methods.length === 0 ? "" : `{${columns.join(",")}}`}:`,
-    ...rows.map((row) => `  ${row}`)
+    ...rows.map((row) => `  ${row}`),
+    ...toonExclusionLines(report.exclusions)
   ].join("\n") + "\n";
 }
 
@@ -282,7 +298,7 @@ function toJunitXml(report: AnalysisReport, omitRedundancy: boolean, elapsedSeco
     "@_errors": 0,
     "@_time": time,
     properties: {
-      property: [toXmlProperty("threshold", String(report.threshold))]
+      property: junitProperties(report)
     }
   };
 
@@ -335,6 +351,26 @@ function toXmlProperty(name: string, value: string): XmlNode {
   };
 }
 
+function junitProperties(report: AnalysisReport): XmlNode[] {
+  const properties = [toXmlProperty("threshold", String(report.threshold))];
+  if (report.exclusions) {
+    properties.push(
+      toXmlProperty("exclusion.discoveredFiles", String(report.exclusions.discoveredFiles)),
+      toXmlProperty("exclusion.analyzedFiles", String(report.exclusions.analyzedFiles)),
+      toXmlProperty("exclusion.analyzedFunctions", String(report.exclusions.analyzedFunctions)),
+      toXmlProperty("exclusion.excludedFiles", String(report.exclusions.excludedFiles)),
+      toXmlProperty("exclusion.excludedFunctions", String(report.exclusions.excludedFunctions))
+    );
+    for (const count of report.exclusions.excludedFileReasons) {
+      properties.push(toXmlProperty(`exclusion.file.${sanitizePropertyName(count.reason)}`, String(count.count)));
+    }
+    for (const count of report.exclusions.excludedFunctionReasons) {
+      properties.push(toXmlProperty(`exclusion.function.${sanitizePropertyName(count.reason)}`, String(count.count)));
+    }
+  }
+  return properties;
+}
+
 function junitStatusXml(entry: MethodReportEntry, threshold: number): XmlNode {
   if (entry.status !== "failed") {
     return {};
@@ -363,4 +399,51 @@ function formatTime(elapsedSeconds: number): string {
     return "0.000000";
   }
   return Math.max(elapsedSeconds, 1e-6).toFixed(6);
+}
+
+function exclusionTextLines(exclusions: SourceExclusionAudit | undefined): string[] {
+  if (!exclusions) {
+    return [];
+  }
+  const lines = [
+    "",
+    "exclusions:",
+    `  discoveredFiles: ${exclusions.discoveredFiles}`,
+    `  analyzedFiles: ${exclusions.analyzedFiles}`,
+    `  analyzedFunctions: ${exclusions.analyzedFunctions}`,
+    `  excludedFiles: ${exclusions.excludedFiles}`,
+    `  excludedFunctions: ${exclusions.excludedFunctions}`
+  ];
+  for (const count of exclusions.excludedFileReasons) {
+    lines.push(`  file.${count.reason}: ${count.count}`);
+  }
+  for (const count of exclusions.excludedFunctionReasons) {
+    lines.push(`  function.${count.reason}: ${count.count}`);
+  }
+  return lines;
+}
+
+function toonExclusionLines(exclusions: SourceExclusionAudit | undefined): string[] {
+  if (!exclusions) {
+    return [];
+  }
+  const lines = [
+    "exclusions:",
+    `  discoveredFiles: ${exclusions.discoveredFiles}`,
+    `  analyzedFiles: ${exclusions.analyzedFiles}`,
+    `  analyzedFunctions: ${exclusions.analyzedFunctions}`,
+    `  excludedFiles: ${exclusions.excludedFiles}`,
+    `  excludedFunctions: ${exclusions.excludedFunctions}`
+  ];
+  for (const count of exclusions.excludedFileReasons) {
+    lines.push(`  file.${count.reason}: ${count.count}`);
+  }
+  for (const count of exclusions.excludedFunctionReasons) {
+    lines.push(`  function.${count.reason}: ${count.count}`);
+  }
+  return lines;
+}
+
+function sanitizePropertyName(value: string): string {
+  return value.replace(/[^A-Za-z0-9_.-]/g, "_");
 }

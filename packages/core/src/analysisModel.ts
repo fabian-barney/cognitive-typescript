@@ -2,9 +2,16 @@ import type ts from "typescript";
 
 import type { MethodDescriptor, SourceSpan } from "./types";
 
+export interface ParsedMethodDescriptor extends MethodDescriptor {
+  exclusionNames: string[];
+  decoratorNames: string[];
+  leadingCommentText: string;
+}
+
 export interface ParsedFileMethods {
   filePath: string;
-  methods: MethodDescriptor[];
+  fileLeadingCommentText: string;
+  methods: ParsedMethodDescriptor[];
 }
 
 export interface InternalMethod {
@@ -21,6 +28,9 @@ export interface InternalMethod {
   symbols: ts.Symbol[];
   fallbackNames: string[];
   fallbackOwnerName: string | null;
+  exclusionNames: string[];
+  decoratorNames: string[];
+  leadingCommentText: string;
   calls: CallTarget[];
 }
 

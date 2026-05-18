@@ -15,8 +15,8 @@ const HELP_TEXT = `cognitive-typescript
 
 Usage:
   cognitive-typescript [--help]
-  cognitive-typescript [--changed] [--format <format>] [--agent] [--failures-only[=true|false]] [--omit-redundancy[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <integer>]
-  cognitive-typescript [--format <format>] [--agent] [--failures-only[=true|false]] [--omit-redundancy[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <integer>] <path ...>
+  cognitive-typescript [--changed] [--format <format>] [--agent] [--failures-only[=true|false]] [--omit-redundancy[=true|false]] [--exclude <glob>] [--exclude-name <regex>] [--exclude-decorator <name>] [--exclude-comment <marker>] [--use-default-exclusions[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <integer>]
+  cognitive-typescript [--format <format>] [--agent] [--failures-only[=true|false]] [--omit-redundancy[=true|false]] [--exclude <glob>] [--exclude-name <regex>] [--exclude-decorator <name>] [--exclude-comment <marker>] [--use-default-exclusions[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <integer>] <path ...>
 
 Options:
   --help                     Print usage to stdout
@@ -27,6 +27,12 @@ Options:
                              Emit failed functions only in the primary report
   --omit-redundancy[=true|false]
                              Omit redundant per-method status in the primary report
+  --exclude <glob>           Exclude normalized project-relative paths from analysis (repeatable)
+  --exclude-name <regex>     Exclude matching function or method names from analysis (repeatable)
+  --exclude-decorator <name> Exclude matching decorators by simple or dotted source name (repeatable)
+  --exclude-comment <marker> Exclude generated code with leading file/function comment markers (repeatable)
+  --use-default-exclusions[=true|false]
+                             Enable conservative generated-code exclusions (default: true)
   --output <path>            Write the primary report to a file instead of stdout
   --junit-report <path>      Also write a full JUnit XML report for CI test-report UIs
   --threshold <integer>      Override the Cognitive Complexity threshold (default: 15)
@@ -70,6 +76,11 @@ interface ParseState {
   agent: boolean;
   failuresOnly: boolean;
   omitRedundancy: boolean;
+  excludes: string[];
+  excludeNames: string[];
+  excludeDecorators: string[];
+  excludeComments: string[];
+  useDefaultExclusions: boolean;
   output?: string;
   junitReport?: string;
   helpSeen: boolean;
@@ -79,6 +90,7 @@ interface ParseState {
   agentSeen: boolean;
   failuresOnlySeen: boolean;
   omitRedundancySeen: boolean;
+  useDefaultExclusionsSeen: boolean;
   outputSeen: boolean;
   junitReportSeen: boolean;
   fileArgs: string[];
@@ -105,6 +117,38 @@ const OPTION_HANDLERS: Record<string, OptionHandler> = {
     state.agent = true;
     state.agentSeen = true;
     return index;
+  },
+  "--exclude": (state, args, index, value) => {
+    state.excludes.push(parseListOptionValue(
+      optionValue(args, index, value, "--exclude", "a glob"),
+      "--exclude",
+      "a glob"
+    ));
+    return value === undefined ? index + 1 : index;
+  },
+  "--exclude-name": (state, args, index, value) => {
+    state.excludeNames.push(parseListOptionValue(
+      optionValue(args, index, value, "--exclude-name", "a regex"),
+      "--exclude-name",
+      "a regex"
+    ));
+    return value === undefined ? index + 1 : index;
+  },
+  "--exclude-decorator": (state, args, index, value) => {
+    state.excludeDecorators.push(parseListOptionValue(
+      optionValue(args, index, value, "--exclude-decorator", "a decorator name"),
+      "--exclude-decorator",
+      "a decorator name"
+    ));
+    return value === undefined ? index + 1 : index;
+  },
+  "--exclude-comment": (state, args, index, value) => {
+    state.excludeComments.push(parseListOptionValue(
+      optionValue(args, index, value, "--exclude-comment", "a comment marker"),
+      "--exclude-comment",
+      "a comment marker"
+    ));
+    return value === undefined ? index + 1 : index;
   },
   "--format": (state, args, index, value) => {
     ensureOptionIsUnique(state.formatSeen, "--format");
@@ -134,7 +178,8 @@ const OPTION_HANDLERS: Record<string, OptionHandler> = {
 
 const BOOLEAN_OPTION_HANDLERS: Record<string, BooleanOptionHandler> = {
   "--failures-only": parseFailuresOnly,
-  "--omit-redundancy": parseOmitRedundancy
+  "--omit-redundancy": parseOmitRedundancy,
+  "--use-default-exclusions": parseUseDefaultExclusions
 };
 
 function createParseState(): ParseState {
@@ -146,6 +191,11 @@ function createParseState(): ParseState {
     agent: false,
     failuresOnly: false,
     omitRedundancy: false,
+    excludes: [],
+    excludeNames: [],
+    excludeDecorators: [],
+    excludeComments: [],
+    useDefaultExclusions: true,
     output: undefined,
     junitReport: undefined,
     helpSeen: false,
@@ -155,6 +205,7 @@ function createParseState(): ParseState {
     agentSeen: false,
     failuresOnlySeen: false,
     omitRedundancySeen: false,
+    useDefaultExclusionsSeen: false,
     outputSeen: false,
     junitReportSeen: false,
     fileArgs: []
@@ -201,6 +252,11 @@ function finalizeCliArguments(state: ParseState): CliArguments {
     agent: state.agent,
     failuresOnly: state.failuresOnly,
     omitRedundancy: state.omitRedundancy,
+    excludes: state.excludes,
+    excludeNames: state.excludeNames,
+    excludeDecorators: state.excludeDecorators,
+    excludeComments: state.excludeComments,
+    useDefaultExclusions: state.useDefaultExclusions,
     ...optionalPath("output", state.output),
     ...optionalPath("junitReport", state.junitReport)
   };
@@ -238,6 +294,7 @@ function hasHelpConflicts(state: ParseState): boolean {
     state.agentSeen,
     state.failuresOnlySeen,
     state.omitRedundancySeen,
+    state.useDefaultExclusionsSeen,
     state.outputSeen,
     state.junitReportSeen,
     state.fileArgs.length > 0
@@ -300,6 +357,12 @@ function parseOmitRedundancy(state: ParseState, value: string | undefined): void
   state.omitRedundancySeen = true;
 }
 
+function parseUseDefaultExclusions(state: ParseState, value: string | undefined): void {
+  ensureOptionIsUnique(state.useDefaultExclusionsSeen, "--use-default-exclusions");
+  state.useDefaultExclusions = parseBooleanOption(value, "--use-default-exclusions");
+  state.useDefaultExclusionsSeen = true;
+}
+
 function parseBooleanOption(value: string | undefined, option: string): boolean {
   if (value === undefined) {
     return true;
@@ -340,6 +403,17 @@ function parsePathOption(value: string, option: string): string {
   const trimmedValue = value.trim();
   if (trimmedValue === "") {
     throw new Error(`${option} requires a path`);
+  }
+  if (trimmedValue !== value) {
+    throw new Error(`${option} must not include leading or trailing whitespace`);
+  }
+  return value;
+}
+
+function parseListOptionValue(value: string, option: string, description: string): string {
+  const trimmedValue = value.trim();
+  if (trimmedValue === "") {
+    throw new Error(`${option} requires ${description}`);
   }
   if (trimmedValue !== value) {
     throw new Error(`${option} must not include leading or trailing whitespace`);
@@ -397,6 +471,11 @@ async function analyzeCliProject(
       projectRoot: path.resolve(projectRoot),
       explicitPaths: parsed.mode === "explicit" ? parsed.fileArgs : [],
       changedOnly: parsed.mode === "changed",
+      excludes: parsed.excludes,
+      excludeNames: parsed.excludeNames,
+      excludeDecorators: parsed.excludeDecorators,
+      excludeComments: parsed.excludeComments,
+      useDefaultExclusions: parsed.useDefaultExclusions,
       threshold: parsed.threshold,
       stderr
     });
@@ -443,8 +522,10 @@ async function writeCliReports(
     format: parsed.format,
     agent: parsed.agent,
     threshold: result.threshold,
+    exclusionAudit: result.exclusionAudit,
     failuresOnly: parsed.failuresOnly,
     omitRedundancy: parsed.omitRedundancy,
+    includePrimaryExclusionAudit: !parsed.agent,
     output: parsed.output,
     junitReport: parsed.junitReport,
     elapsedSeconds

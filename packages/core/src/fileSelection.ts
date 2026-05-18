@@ -5,8 +5,6 @@ import { IGNORED_DIRECTORIES } from "./constants";
 import { runCommand, toRelativePath } from "./utils";
 
 const ANALYZABLE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"];
-const TEST_FILE_MARKERS = [".test.", ".spec."];
-const EXCLUDED_PATH_SEGMENTS = ["/__tests__/", "/dist/", "/coverage/", "/node_modules/"];
 
 export async function findAllTypeScriptFilesUnderSourceRoots(projectRoot: string): Promise<string[]> {
   const files = new Set<string>();
@@ -44,20 +42,7 @@ export async function changedTypeScriptFilesUnderSourceRoots(projectRoot: string
 
 export function isAnalyzableFile(filePath: string): boolean {
   const normalized = toRelativePath(path.parse(filePath).root, filePath).toLowerCase();
-  const baseName = path.basename(normalized);
-  if (!hasAnySuffix(normalized, ANALYZABLE_EXTENSIONS)) {
-    return false;
-  }
-  if (normalized.endsWith(".d.ts")) {
-    return false;
-  }
-  if (containsAny(baseName, TEST_FILE_MARKERS)) {
-    return false;
-  }
-  if (containsAny(normalized, EXCLUDED_PATH_SEGMENTS)) {
-    return false;
-  }
-  return true;
+  return hasAnySuffix(normalized, ANALYZABLE_EXTENSIONS);
 }
 
 interface GitStatusEntry {
@@ -111,10 +96,6 @@ function isIncludedGitStatus(status: string): boolean {
 
 function isRenameOrCopyStatus(status: string): boolean {
   return status.includes("R") || status.includes("C");
-}
-
-function containsAny(value: string, fragments: string[]): boolean {
-  return fragments.some((fragment) => value.includes(fragment));
 }
 
 function hasAnySuffix(value: string, suffixes: string[]): boolean {
