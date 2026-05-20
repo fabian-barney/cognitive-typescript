@@ -198,7 +198,7 @@ function createInternalMethod({
     fallbackNames: uniqueStrings([functionName, ...(fallbackNames ?? [])]),
     fallbackOwnerName: fallbackOwnerName ?? containerName,
     exclusionNames: uniqueStrings(exclusionNames(containerName, functionName)),
-    decoratorNames: collectDecoratorNames(functionNode, sourceFile),
+    decoratorNames: collectDecoratorNames(functionNode),
     leadingCommentText: leadingCommentText(sourceFile.text, functionNode.getFullStart(), functionNode.getStart(sourceFile)),
     calls: analysis.calls
   };
@@ -500,18 +500,18 @@ function uniqueStrings(values: string[]): string[] {
   return Array.from(new Set(values));
 }
 
-function collectDecoratorNames(node: NamedFunctionLike, sourceFile: ts.SourceFile): string[] {
+function collectDecoratorNames(node: NamedFunctionLike): string[] {
   if (!ts.canHaveDecorators(node)) {
     return [];
   }
   const decorators = ts.getDecorators(node) ?? [];
-  const names = decorators.flatMap((decorator) => decoratorNames(decorator.expression, sourceFile));
+  const names = decorators.flatMap((decorator) => decoratorNames(decorator.expression));
   return uniqueStrings(names);
 }
 
-function decoratorNames(expression: ts.LeftHandSideExpression, sourceFile: ts.SourceFile): string[] {
+function decoratorNames(expression: ts.LeftHandSideExpression): string[] {
   const target = decoratorTargetExpression(expression);
-  const fullName = decoratorNameText(target, sourceFile);
+  const fullName = decoratorNameText(target);
   if (!fullName) {
     return [];
   }
@@ -523,14 +523,19 @@ function decoratorTargetExpression(expression: ts.LeftHandSideExpression): ts.Le
   return ts.isCallExpression(expression) ? expression.expression : expression;
 }
 
-function decoratorNameText(expression: ts.LeftHandSideExpression, sourceFile: ts.SourceFile): string | null {
+function decoratorNameText(expression: ts.LeftHandSideExpression): string | null {
   if (ts.isIdentifier(expression)) {
     return expression.text;
   }
-  if (ts.isPropertyAccessExpression(expression)) {
-    return expression.getText(sourceFile);
+  return propertyAccessName(expression);
+}
+
+function propertyAccessName(expression: ts.LeftHandSideExpression): string | null {
+  if (!ts.isPropertyAccessExpression(expression)) {
+    return null;
   }
-  return null;
+  const ownerName = decoratorNameText(expression.expression);
+  return ownerName ? `${ownerName}.${expression.name.text}` : null;
 }
 
 function leadingCommentText(sourceText: string, fullStart: number, start: number): string {

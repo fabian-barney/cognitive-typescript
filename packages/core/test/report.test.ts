@@ -120,6 +120,10 @@ describe("report formatting", () => {
     expect(formatToonReport(buildAnalysisReport(metrics, 15, false, audit()))).toContain("exclusions:");
   });
 
+  it("omits TOON exclusion lines when no audit is present", () => {
+    expect(formatToonReport(buildAnalysisReport([metric()]))).not.toContain("exclusions:");
+  });
+
   it("filters failures and omits redundant method status for compact primary reports", () => {
     const parsed = JSON.parse(formatAnalysisReport([
       metric(),

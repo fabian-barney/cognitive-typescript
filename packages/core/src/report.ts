@@ -405,27 +405,15 @@ function exclusionTextLines(exclusions: SourceExclusionAudit | undefined, leadin
   if (!exclusions) {
     return [];
   }
-  const lines = [
-    "exclusions:",
-    `  discoveredFiles: ${exclusions.discoveredFiles}`,
-    `  analyzedFiles: ${exclusions.analyzedFiles}`,
-    `  analyzedFunctions: ${exclusions.analyzedFunctions}`,
-    `  excludedFiles: ${exclusions.excludedFiles}`,
-    `  excludedFunctions: ${exclusions.excludedFunctions}`
-  ];
-  for (const count of exclusions.excludedFileReasons) {
-    lines.push(`  file.${count.reason}: ${count.count}`);
-  }
-  for (const count of exclusions.excludedFunctionReasons) {
-    lines.push(`  function.${count.reason}: ${count.count}`);
-  }
+  const lines = exclusionLines(exclusions);
   return leadingBlankLine ? ["", ...lines] : lines;
 }
 
 function toonExclusionLines(exclusions: SourceExclusionAudit | undefined): string[] {
-  if (!exclusions) {
-    return [];
-  }
+  return exclusions ? exclusionLines(exclusions) : [];
+}
+
+function exclusionLines(exclusions: SourceExclusionAudit): string[] {
   const lines = [
     "exclusions:",
     `  discoveredFiles: ${exclusions.discoveredFiles}`,
@@ -434,13 +422,19 @@ function toonExclusionLines(exclusions: SourceExclusionAudit | undefined): strin
     `  excludedFiles: ${exclusions.excludedFiles}`,
     `  excludedFunctions: ${exclusions.excludedFunctions}`
   ];
-  for (const count of exclusions.excludedFileReasons) {
-    lines.push(`  file.${count.reason}: ${count.count}`);
-  }
-  for (const count of exclusions.excludedFunctionReasons) {
-    lines.push(`  function.${count.reason}: ${count.count}`);
-  }
+  appendExclusionReasonLines(lines, "file", exclusions.excludedFileReasons);
+  appendExclusionReasonLines(lines, "function", exclusions.excludedFunctionReasons);
   return lines;
+}
+
+function appendExclusionReasonLines(
+  lines: string[],
+  prefix: "file" | "function",
+  counts: SourceExclusionAudit["excludedFileReasons"] | SourceExclusionAudit["excludedFunctionReasons"]
+): void {
+  for (const count of counts) {
+    lines.push(`  ${prefix}.${count.reason}: ${count.count}`);
+  }
 }
 
 function sanitizePropertyName(value: string): string {

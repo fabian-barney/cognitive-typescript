@@ -49,6 +49,16 @@ interface NameRule {
   regex: RegExp;
 }
 
+interface PathReasonRule {
+  matches: (normalizedPath: string) => boolean;
+  reason: string;
+}
+
+interface GlobToken {
+  length: number;
+  regexSource: string;
+}
+
 export function resolveSourceExclusionOptions(options: Partial<SourceExclusionOptions>): SourceExclusionOptions {
   return {
     excludes: normalizeList(options.excludes),
@@ -103,20 +113,7 @@ export class SourceExclusionMatcher {
 
   pathExclusionReason(relativePath: string): string | null {
     const normalizedPath = normalizePath(relativePath);
-    if (this.options.useDefaultExclusions) {
-      const defaultReason = defaultFileExclusionReason(normalizedPath);
-      if (defaultReason) {
-        return defaultReason;
-      }
-    }
-
-    for (const rule of this.pathRules) {
-      if (rule.regex.test(normalizedPath)) {
-        return `user:path:${rule.raw}`;
-      }
-    }
-
-    return null;
+    return this.defaultPathExclusionReason(normalizedPath) ?? this.userPathExclusionReason(normalizedPath);
   }
 
   commentExclusionReason(leadingCommentText: string): string | null {
@@ -125,6 +122,19 @@ export class SourceExclusionMatcher {
 
   usesCommentMarkers(): boolean {
     return this.commentMarkers.length > 0;
+  }
+
+  private defaultPathExclusionReason(normalizedPath: string): string | null {
+    return this.options.useDefaultExclusions ? defaultFileExclusionReason(normalizedPath) : null;
+  }
+
+  private userPathExclusionReason(normalizedPath: string): string | null {
+    for (const rule of this.pathRules) {
+      if (rule.regex.test(normalizedPath)) {
+        return `user:path:${rule.raw}`;
+      }
+    }
+    return null;
   }
 }
 
@@ -174,23 +184,44 @@ function normalizeList(values: string[] | undefined): string[] {
     .filter((value) => value.length > 0);
 }
 
+const DEFAULT_FILE_EXCLUSION_RULES: readonly PathReasonRule[] = [
+  {
+    matches: hasDeclarationFileSuffix,
+    reason: "default:path:declaration-file"
+  },
+  {
+    matches: hasGeneratedFileSuffix,
+    reason: "default:path:generated-file"
+  },
+  {
+    matches: hasGeneratedDirectorySegment,
+    reason: "default:path:generated-directory"
+  },
+  {
+    matches: isInTestDirectory,
+    reason: "default:path:test-directory"
+  },
+  {
+    matches: hasTestFileMarker,
+    reason: "default:path:test-file"
+  }
+];
+
 function defaultFileExclusionReason(normalizedPath: string): string | null {
-  if (DECLARATION_FILE_SUFFIXES.some((suffix) => normalizedPath.endsWith(suffix))) {
-    return "default:path:declaration-file";
-  }
-  if (GENERATED_FILE_SUFFIXES.some((suffix) => normalizedPath.endsWith(suffix))) {
-    return "default:path:generated-file";
-  }
-  if (hasGeneratedDirectorySegment(normalizedPath)) {
-    return "default:path:generated-directory";
-  }
-  if (normalizedPath.includes("/__tests__/")) {
-    return "default:path:test-directory";
-  }
-  if (TEST_FILE_MARKERS.some((marker) => baseName(normalizedPath).includes(marker))) {
-    return "default:path:test-file";
+  for (const rule of DEFAULT_FILE_EXCLUSION_RULES) {
+    if (rule.matches(normalizedPath)) {
+      return rule.reason;
+    }
   }
   return null;
+}
+
+function hasDeclarationFileSuffix(normalizedPath: string): boolean {
+  return DECLARATION_FILE_SUFFIXES.some((suffix) => normalizedPath.endsWith(suffix));
+}
+
+function hasGeneratedFileSuffix(normalizedPath: string): boolean {
+  return GENERATED_FILE_SUFFIXES.some((suffix) => normalizedPath.endsWith(suffix));
 }
 
 function hasGeneratedDirectorySegment(normalizedPath: string): boolean {
@@ -198,6 +229,14 @@ function hasGeneratedDirectorySegment(normalizedPath: string): boolean {
     .split("/")
     .slice(0, -1)
     .some((segment) => GENERATED_DIRECTORY_SEGMENTS.has(segment));
+}
+
+function isInTestDirectory(normalizedPath: string): boolean {
+  return normalizedPath.includes("/__tests__/");
+}
+
+function hasTestFileMarker(normalizedPath: string): boolean {
+  return TEST_FILE_MARKERS.some((marker) => baseName(normalizedPath).includes(marker));
 }
 
 function baseName(normalizedPath: string): string {
@@ -242,24 +281,25 @@ function compileGlobPattern(pattern: string): RegExp {
 
 function globToRegexSource(pattern: string): string {
   let source = "";
-  for (let index = 0; index < pattern.length; index += 1) {
-    const character = pattern[index];
-    if (character === "*") {
-      if (pattern[index + 1] === "*") {
-        source += ".*";
-        index += 1;
-      } else {
-        source += "[^/]*";
-      }
-      continue;
-    }
-    if (character === "?") {
-      source += "[^/]";
-      continue;
-    }
-    source += escapeRegexCharacter(character);
+  for (let index = 0; index < pattern.length;) {
+    const token = readGlobToken(pattern, index);
+    source += token.regexSource;
+    index += token.length;
   }
   return source;
+}
+
+function readGlobToken(pattern: string, index: number): GlobToken {
+  const character = pattern[index];
+  if (character === "*") {
+    return pattern[index + 1] === "*"
+      ? { length: 2, regexSource: ".*" }
+      : { length: 1, regexSource: "[^/]*" };
+  }
+  if (character === "?") {
+    return { length: 1, regexSource: "[^/]" };
+  }
+  return { length: 1, regexSource: escapeRegexCharacter(character) };
 }
 
 function compileNamePattern(pattern: string): RegExp {
