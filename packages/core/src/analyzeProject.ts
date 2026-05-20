@@ -21,7 +21,12 @@ export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promi
   });
   const exclusionMatcher = new SourceExclusionMatcher(exclusionOptions);
   const audit = new SourceExclusionAuditBuilder();
-  const discoveredFiles = await selectFiles(projectRoot, options.explicitPaths ?? [], options.changedOnly ?? false);
+  const discoveredFiles = await selectFiles(
+    projectRoot,
+    options.explicitPaths ?? [],
+    options.changedOnly ?? false,
+    exclusionOptions.useDefaultExclusions
+  );
   audit.recordDiscoveredFiles(discoveredFiles.length);
   const selectedFiles = await filterSelectedFiles(projectRoot, discoveredFiles, exclusionMatcher, audit);
   if (selectedFiles.length === 0) {
@@ -84,15 +89,20 @@ function emptyAnalysisResult(threshold: number, audit: SourceExclusionAuditBuild
 async function selectFiles(
   projectRoot: string,
   explicitPaths: string[],
-  changedOnly: boolean
+  changedOnly: boolean,
+  useDefaultExclusions: boolean
 ): Promise<string[]> {
   if (changedOnly) {
     return changedTypeScriptFilesUnderSourceRoots(projectRoot);
   }
   if (explicitPaths.length > 0) {
-    return expandExplicitPaths(projectRoot, explicitPaths);
+    return expandExplicitPaths(projectRoot, explicitPaths, {
+      pruneDefaultExcludedDirectories: useDefaultExclusions
+    });
   }
-  return findAllTypeScriptFilesUnderSourceRoots(projectRoot);
+  return findAllTypeScriptFilesUnderSourceRoots(projectRoot, {
+    pruneDefaultExcludedDirectories: useDefaultExclusions
+  });
 }
 
 async function filterSelectedFiles(

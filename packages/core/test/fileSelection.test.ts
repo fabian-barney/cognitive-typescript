@@ -58,6 +58,41 @@ describe("file selection", () => {
     ]);
   });
 
+  it("prunes default generated/build directories during source-root discovery when requested", async () => {
+    const projectRoot = await createTempDir("cognitive-files-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "src/root.ts": "export const root = 1;\n",
+      "packages/web/src/page.ts": "export const page = 1;\n",
+      "packages/web/dist/src/generated.ts": "export const generated = 1;\n",
+      "packages/web/coverage/src/covered.ts": "export const covered = 1;\n",
+      "packages/web/.next/src/next.ts": "export const next = 1;\n"
+    });
+
+    const files = await findAllTypeScriptFilesUnderSourceRoots(projectRoot, {
+      pruneDefaultExcludedDirectories: true
+    });
+    expect(files.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual([
+      "packages/web/src/page.ts",
+      "src/root.ts"
+    ]);
+  });
+
+  it("does not prune build-output src roots when discovery pruning is disabled", async () => {
+    const projectRoot = await createTempDir("cognitive-files-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "src/root.ts": "export const root = 1;\n",
+      "packages/web/dist/src/generated.ts": "export const generated = 1;\n"
+    });
+
+    const files = await findAllTypeScriptFilesUnderSourceRoots(projectRoot);
+    expect(files.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual([
+      "packages/web/dist/src/generated.ts",
+      "src/root.ts"
+    ]);
+  });
+
   it("detects changed files under src roots only", async () => {
     const projectRoot = await createTempDir("cognitive-files-");
     tempDirs.push(projectRoot);

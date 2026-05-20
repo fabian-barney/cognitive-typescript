@@ -54,6 +54,25 @@ describe("source exclusions", () => {
     expect(result.exclusionAudit.excludedFiles).toBe(0);
   });
 
+  it("keeps generated build-output src roots discoverable when default exclusions are disabled", async () => {
+    const projectRoot = await createTempDir("cognitive-exclusions-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "dist/src/generated.ts": buildDeepNestedIfFunction("tooComplex", 7),
+      "src/manual.ts": buildSimpleFunction("safe")
+    });
+
+    const result = await analyzeProject({
+      projectRoot,
+      useDefaultExclusions: false
+    });
+
+    expect(result.thresholdExceeded).toBe(true);
+    expect(result.metrics.map((metric) => metric.displayName)).toEqual(["tooComplex", "safe"]);
+    expect(result.exclusionAudit.excludedFiles).toBe(0);
+  });
+
   it("covers declaration and test-path default exclusions", async () => {
     const projectRoot = await createTempDir("cognitive-exclusions-");
     tempDirs.push(projectRoot);

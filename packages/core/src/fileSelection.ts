@@ -1,31 +1,39 @@
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
-import { IGNORED_DIRECTORIES } from "./constants";
+import { DEFAULT_EXCLUDED_SOURCE_ROOT_DISCOVERY_DIRECTORIES, IGNORED_DIRECTORIES } from "./constants";
 import { runCommand, toRelativePath } from "./utils";
 
 const ANALYZABLE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"];
 
-export async function findAllTypeScriptFilesUnderSourceRoots(projectRoot: string): Promise<string[]> {
+interface FileSelectionOptions {
+  pruneDefaultExcludedDirectories?: boolean;
+}
+
+export async function findAllTypeScriptFilesUnderSourceRoots(
+  projectRoot: string,
+  options: FileSelectionOptions = {}
+): Promise<string[]> {
   const files = new Set<string>();
   await walkForSourceRoots(projectRoot, async (sourceRoot) => {
     await walkSourceTree(sourceRoot, async (filePath) => {
       files.add(path.resolve(filePath));
     });
-  });
+  }, options);
   return Array.from(files).sort();
 }
 
 export async function expandExplicitPaths(
   projectRoot: string,
-  values: string[]
+  values: string[],
+  options: FileSelectionOptions = {}
 ): Promise<string[]> {
   const files = new Set<string>();
   for (const value of values) {
     const resolvedPath = path.resolve(projectRoot, value);
     const fileStats = await stat(resolvedPath);
     if (fileStats.isDirectory()) {
-      await expandDirectoryPath(resolvedPath, files);
+      await expandDirectoryPath(resolvedPath, files, options);
       continue;
     }
     if (isAnalyzableFile(resolvedPath)) {
@@ -121,11 +129,12 @@ function readChangedFileStatusError(stderr: string): string {
 
 async function walkForSourceRoots(
   currentDir: string,
-  onSourceRoot: (sourceRoot: string) => Promise<void>
+  onSourceRoot: (sourceRoot: string) => Promise<void>,
+  options: FileSelectionOptions
 ): Promise<void> {
   const entries = await readdir(currentDir, { withFileTypes: true });
   for (const entry of entries) {
-    const kind = classifySourceRootEntry(entry);
+    const kind = classifySourceRootEntry(entry, options);
     if (kind === "skip") {
       continue;
     }
@@ -134,18 +143,22 @@ async function walkForSourceRoots(
       await onSourceRoot(absolutePath);
       continue;
     }
-    await walkForSourceRoots(absolutePath, onSourceRoot);
+    await walkForSourceRoots(absolutePath, onSourceRoot, options);
   }
 }
 
-function classifySourceRootEntry(entry: { isDirectory(): boolean; name: string }): "skip" | "source-root" | "descend" {
+function classifySourceRootEntry(
+  entry: { isDirectory(): boolean; name: string },
+  options: FileSelectionOptions
+): "skip" | "source-root" | "descend" {
   if (!entry.isDirectory()) {
     return "skip";
   }
-  if (IGNORED_DIRECTORIES.has(entry.name)) {
+  const lowerName = entry.name.toLowerCase();
+  if (IGNORED_DIRECTORIES.has(lowerName) || shouldPruneDiscoveryDirectory(lowerName, options)) {
     return "skip";
   }
-  return entry.name === "src" ? "source-root" : "descend";
+  return lowerName === "src" ? "source-root" : "descend";
 }
 
 async function walkSourceTree(
@@ -183,7 +196,11 @@ async function walkFileEntry(absolutePath: string, onFile: (filePath: string) =>
   await onFile(absolutePath);
 }
 
-async function expandDirectoryPath(directoryPath: string, files: Set<string>): Promise<void> {
+async function expandDirectoryPath(
+  directoryPath: string,
+  files: Set<string>,
+  options: FileSelectionOptions
+): Promise<void> {
   if (path.basename(directoryPath).toLowerCase() === "src") {
     await walkSourceTree(directoryPath, async (filePath) => {
       files.add(path.resolve(filePath));
@@ -195,5 +212,10 @@ async function expandDirectoryPath(directoryPath: string, files: Set<string>): P
     await walkSourceTree(sourceRoot, async (filePath) => {
       files.add(path.resolve(filePath));
     });
-  });
+  }, options);
+}
+
+function shouldPruneDiscoveryDirectory(entryName: string, options: FileSelectionOptions): boolean {
+  return Boolean(options.pruneDefaultExcludedDirectories)
+    && DEFAULT_EXCLUDED_SOURCE_ROOT_DISCOVERY_DIRECTORIES.has(entryName);
 }
