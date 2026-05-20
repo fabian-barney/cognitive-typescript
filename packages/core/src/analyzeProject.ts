@@ -103,8 +103,16 @@ async function filterSelectedFiles(
   const remainingFiles: string[] = [];
   for (const filePath of selectedFiles) {
     const relativePath = toRelativePath(projectRoot, filePath);
-    const sourceText = await readFile(filePath, "utf8");
-    const exclusionReason = exclusionMatcher.fileExclusionReason(relativePath, leadingFileCommentText(sourceText));
+    const pathExclusionReason = exclusionMatcher.pathExclusionReason(relativePath);
+    if (pathExclusionReason) {
+      audit.recordExcludedFile(pathExclusionReason);
+      continue;
+    }
+
+    const commentExclusionReason = exclusionMatcher.usesCommentMarkers()
+      ? exclusionMatcher.commentExclusionReason(leadingFileCommentText(await readFile(filePath, "utf8")))
+      : null;
+    const exclusionReason = commentExclusionReason;
     if (exclusionReason) {
       audit.recordExcludedFile(exclusionReason);
       continue;

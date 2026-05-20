@@ -104,6 +104,33 @@ ${nestedIfBody(7, 2)}
       { reason: "user:name:.*Factory$", count: 1 }
     ]));
   });
+
+  it("matches configured decorators with an optional leading at-sign", async () => {
+    const projectRoot = await createTempDir("cognitive-exclusions-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": "{\"name\":\"fixture\",\"private\":true}",
+      "src/sample.ts": `class Sample {
+  @Generated
+  decorated(${parameters(7)}) {
+${nestedIfBody(7, 2)}
+  }
+}
+`
+    });
+
+    const result = await analyzeProject({
+      projectRoot,
+      excludeDecorators: ["@Generated"]
+    });
+
+    expect(result.thresholdExceeded).toBe(false);
+    expect(result.metrics).toEqual([]);
+    expect(result.exclusionAudit.excludedFunctionReasons).toContainEqual({
+      reason: "user:decorator:@Generated",
+      count: 1
+    });
+  });
 });
 
 function buildSimpleFunction(name: string): string {

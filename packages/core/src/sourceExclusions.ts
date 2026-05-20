@@ -82,21 +82,7 @@ export class SourceExclusionMatcher {
   }
 
   fileExclusionReason(relativePath: string, leadingCommentText: string): string | null {
-    const normalizedPath = normalizePath(relativePath);
-    if (this.options.useDefaultExclusions) {
-      const defaultReason = defaultFileExclusionReason(normalizedPath);
-      if (defaultReason) {
-        return defaultReason;
-      }
-    }
-
-    for (const rule of this.pathRules) {
-      if (rule.regex.test(normalizedPath)) {
-        return `user:path:${rule.raw}`;
-      }
-    }
-
-    return markerReason(this.commentMarkers, leadingCommentText, this.options.useDefaultExclusions);
+    return this.pathExclusionReason(relativePath) ?? this.commentExclusionReason(leadingCommentText);
   }
 
   functionExclusionReason(method: SourceExclusionCandidateMethod): string | null {
@@ -113,6 +99,32 @@ export class SourceExclusionMatcher {
     }
 
     return markerReason(this.commentMarkers, method.leadingCommentText, this.options.useDefaultExclusions);
+  }
+
+  pathExclusionReason(relativePath: string): string | null {
+    const normalizedPath = normalizePath(relativePath);
+    if (this.options.useDefaultExclusions) {
+      const defaultReason = defaultFileExclusionReason(normalizedPath);
+      if (defaultReason) {
+        return defaultReason;
+      }
+    }
+
+    for (const rule of this.pathRules) {
+      if (rule.regex.test(normalizedPath)) {
+        return `user:path:${rule.raw}`;
+      }
+    }
+
+    return null;
+  }
+
+  commentExclusionReason(leadingCommentText: string): string | null {
+    return markerReason(this.commentMarkers, leadingCommentText, this.options.useDefaultExclusions);
+  }
+
+  usesCommentMarkers(): boolean {
+    return this.commentMarkers.length > 0;
   }
 }
 
@@ -211,7 +223,8 @@ function markerReason(
 }
 
 function matchesDecoratorName(decoratorName: string, configured: string): boolean {
-  return decoratorName === configured || simpleName(decoratorName) === configured;
+  const normalizedConfigured = configured.startsWith("@") ? configured.slice(1) : configured;
+  return decoratorName === normalizedConfigured || simpleName(decoratorName) === normalizedConfigured;
 }
 
 function simpleName(value: string): string {

@@ -100,9 +100,9 @@ export function buildAnalysisReport(
 export function buildAgentAnalysisReport(
   metrics: MethodMetrics[],
   threshold = COGNITIVE_COMPLEXITY_THRESHOLD,
-  _exclusions?: SourceExclusionAudit
+  exclusions?: SourceExclusionAudit
 ): CompactAnalysisReport {
-  const report = buildAnalysisReport(metrics, threshold, true);
+  const report = buildAnalysisReport(metrics, threshold, true, exclusions);
   return omitMethodStatuses(report);
 }
 
@@ -156,7 +156,7 @@ export function formatToonReport(report: SerializableReport, omitMethodStatus = 
 export function formatTextReport(report: SerializableReport, omitMethodStatus = false): string {
   const summary = [`status: ${report.status}`, `threshold: ${report.threshold}`];
   if (report.methods.length === 0) {
-    return [...summary, "methods[0]:", ...exclusionTextLines(report.exclusions)].join("\n") + "\n";
+    return [...summary, "methods[0]:", ...exclusionTextLines(report.exclusions, false)].join("\n") + "\n";
   }
 
   const includeStatus = !omitMethodStatus && reportHasMethodStatus(report);
@@ -401,12 +401,11 @@ function formatTime(elapsedSeconds: number): string {
   return Math.max(elapsedSeconds, 1e-6).toFixed(6);
 }
 
-function exclusionTextLines(exclusions: SourceExclusionAudit | undefined): string[] {
+function exclusionTextLines(exclusions: SourceExclusionAudit | undefined, leadingBlankLine = true): string[] {
   if (!exclusions) {
     return [];
   }
   const lines = [
-    "",
     "exclusions:",
     `  discoveredFiles: ${exclusions.discoveredFiles}`,
     `  analyzedFiles: ${exclusions.analyzedFiles}`,
@@ -420,7 +419,7 @@ function exclusionTextLines(exclusions: SourceExclusionAudit | undefined): strin
   for (const count of exclusions.excludedFunctionReasons) {
     lines.push(`  function.${count.reason}: ${count.count}`);
   }
-  return lines;
+  return leadingBlankLine ? ["", ...lines] : lines;
 }
 
 function toonExclusionLines(exclusions: SourceExclusionAudit | undefined): string[] {

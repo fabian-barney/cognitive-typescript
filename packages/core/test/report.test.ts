@@ -145,7 +145,7 @@ describe("report formatting", () => {
     const report = buildAgentAnalysisReport([
       metric(),
       metric({ displayName: "risky", cognitiveComplexity: 16 })
-    ], 15, audit());
+    ], 15);
     const parsed = JSON.parse(formatAnalysisReport([
       metric(),
       metric({ displayName: "risky", cognitiveComplexity: 16 })
@@ -160,6 +160,41 @@ describe("report formatting", () => {
     expect(parsed.methods).toHaveLength(1);
     expect(parsed.methods[0]).not.toHaveProperty("status");
     expect(parsed).not.toHaveProperty("exclusions");
+  });
+
+  it("can include exclusion audit in compact reports when explicitly requested", () => {
+    expect(buildAgentAnalysisReport([
+      metric({ displayName: "risky", cognitiveComplexity: 16 })
+    ], 15, audit())).toEqual({
+      status: "failed",
+      threshold: 15,
+      methods: [
+        {
+          cc: 16,
+          method: "risky",
+          src: "src/sample.ts",
+          lineStart: 1,
+          lineEnd: 3
+        }
+      ],
+      exclusions: audit()
+    });
+  });
+
+  it("does not add a blank separator before exclusions when there are no methods", () => {
+    expect(formatTextReport(buildAnalysisReport([], 15, false, audit()))).toBe(
+      "status: passed\n"
+      + "threshold: 15\n"
+      + "methods[0]:\n"
+      + "exclusions:\n"
+      + "  discoveredFiles: 3\n"
+      + "  analyzedFiles: 2\n"
+      + "  analyzedFunctions: 2\n"
+      + "  excludedFiles: 1\n"
+      + "  excludedFunctions: 1\n"
+      + "  file.default:path:generated-directory: 1\n"
+      + "  function.user:name:.*Factory$: 1\n"
+    );
   });
 
   it("formats JUnit XML with elapsed time and failure diagnostics", () => {
