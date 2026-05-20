@@ -4,6 +4,7 @@ import ts from "typescript";
 
 import { collectMethodsFromSourceFile } from "./functionDiscovery";
 import type { InternalMethod, ParsedFileMethods, ParsedMethodDescriptor } from "./analysisModel";
+import { leadingFileCommentText } from "./leadingCommentText";
 import type { MethodDescriptor } from "./types";
 import { normalizeSlashes } from "./utils";
 
@@ -366,11 +367,4 @@ function formatDiagnostics(diagnostics: readonly ts.Diagnostic[]): string {
     return `${filePath}:${position.line + 1}:${position.character + 1}: ${message}`;
   });
   return `Failed to parse TypeScript source:\n${lines.join("\n")}`;
-}
-
-function leadingFileCommentText(sourceText: string): string {
-  const ranges = ts.getLeadingCommentRanges(sourceText, 0) ?? [];
-  return ranges
-    .map((range) => sourceText.slice(range.pos, range.end))
-    .join("\n");
 }

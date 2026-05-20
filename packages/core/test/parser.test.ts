@@ -3,6 +3,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { parseFileMethods } from "../src/index";
+import { analyzeTypeScriptFiles } from "../src/parser";
 import { createTempDir, disposeTempDir, repoPath, writeProjectFiles } from "./testUtils";
 
 const tempDirs: string[] = [];
@@ -134,6 +135,20 @@ export const registry = {
       recurse: 2,
       'registry["recurse"]': 2
     });
+  });
+
+  it("captures leading file comments after BOM, shebang, and whitespace trivia", async () => {
+    const projectRoot = await createTempDir("cognitive-parser-");
+    tempDirs.push(projectRoot);
+    const filePath = path.join(projectRoot, "sample.ts");
+    await writeProjectFiles(projectRoot, {
+      "sample.ts": "\uFEFF#!/usr/bin/env node\n\n// @generated\n/* generated header */\nexport function sample() {\n  return 1;\n}\n"
+    });
+
+    const [parsed] = await analyzeTypeScriptFiles([filePath]);
+
+    expect(parsed?.fileLeadingCommentText).toContain("// @generated");
+    expect(parsed?.fileLeadingCommentText).toContain("/* generated header */");
   });
 });
 

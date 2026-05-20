@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { COGNITIVE_COMPLEXITY_THRESHOLD, validateThreshold } from "./constants";
 import { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots } from "./fileSelection";
+import { leadingFileCommentText } from "./leadingCommentText";
 import { analyzeTypeScriptFiles } from "./parser";
 import { resolveSourceExclusionOptions, SourceExclusionAuditBuilder, SourceExclusionMatcher } from "./sourceExclusions";
 import { toRelativePath } from "./utils";
@@ -120,10 +121,4 @@ async function filterSelectedFiles(
     remainingFiles.push(filePath);
   }
   return remainingFiles;
-}
-
-function leadingFileCommentText(sourceText: string): string {
-  return sourceText
-    .match(/^\uFEFF?(?:#![^\n]*\n)?(?:\s|\/\/.*?(?:\r?\n|$)|\/\*[\s\S]*?\*\/)*/u)?.[0]
-    ?? "";
 }
