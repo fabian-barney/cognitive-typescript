@@ -3,7 +3,8 @@ import path from "node:path";
 import ts from "typescript";
 
 import { collectMethodsFromSourceFile } from "./functionDiscovery";
-import type { InternalMethod, ParsedFileMethods } from "./analysisModel";
+import type { InternalMethod, ParsedFileMethods, ParsedMethodDescriptor } from "./analysisModel";
+import { leadingFileCommentText } from "./leadingCommentText";
 import type { MethodDescriptor } from "./types";
 import { normalizeSlashes } from "./utils";
 
@@ -24,7 +25,7 @@ export async function analyzeTypeScriptFiles(filePaths: string[]): Promise<Parse
   ensureSelectedFilesParse(program, selectedSourceFiles);
   const methods = collectSelectedMethods(program, selectedSourceFiles);
   const recursiveIds = recursiveMethodIds(methods);
-  return buildParsedFileMethods(resolvedFiles, methods, recursiveIds);
+  return buildParsedFileMethods(resolvedFiles, selectedSourceFiles, methods, recursiveIds);
 }
 
 function recursiveMethodIds(methods: InternalMethod[]): Set<string> {
@@ -152,7 +153,7 @@ function stronglyConnectedRecursiveMembers(
   return recursiveMembers;
 }
 
-function sortDescriptors(methods: MethodDescriptor[]): MethodDescriptor[] {
+function sortDescriptors<T extends MethodDescriptor>(methods: T[]): T[] {
   return [...methods].sort((left, right) => {
     if (left.startLine !== right.startLine) {
       return left.startLine - right.startLine;
@@ -224,22 +225,27 @@ function collectSelectedMethods(program: ts.Program, sourceFiles: ts.SourceFile[
 
 function buildParsedFileMethods(
   resolvedFiles: string[],
+  sourceFiles: ts.SourceFile[],
   methods: InternalMethod[],
   recursiveIds: Set<string>
 ): ParsedFileMethods[] {
-  const methodsByFile = new Map<string, MethodDescriptor[]>();
+  const methodsByFile = new Map<string, ParsedMethodDescriptor[]>();
   for (const method of methods) {
     const descriptors = methodsByFile.get(method.filePath) ?? [];
     descriptors.push(toMethodDescriptor(method, recursiveIds));
     methodsByFile.set(method.filePath, descriptors);
   }
+  const sourceFilesByPath = new Map(
+    sourceFiles.map((sourceFile) => [normalizeFilePath(sourceFile.fileName), sourceFile] as const)
+  );
   return resolvedFiles.map((filePath) => ({
     filePath,
+    fileLeadingCommentText: leadingFileCommentText(sourceFilesByPath.get(filePath)?.text ?? ""),
     methods: sortDescriptors(methodsByFile.get(filePath) ?? [])
   }));
 }
 
-function toMethodDescriptor(method: InternalMethod, recursiveIds: Set<string>): MethodDescriptor {
+function toMethodDescriptor(method: InternalMethod, recursiveIds: Set<string>): ParsedMethodDescriptor {
   return {
     functionName: method.functionName,
     containerName: method.containerName,
@@ -247,7 +253,10 @@ function toMethodDescriptor(method: InternalMethod, recursiveIds: Set<string>): 
     startLine: method.startLine,
     endLine: method.endLine,
     bodySpan: method.bodySpan,
-    cognitiveComplexity: method.baseCognitiveComplexity + (recursiveIds.has(method.id) ? 1 : 0)
+    cognitiveComplexity: method.baseCognitiveComplexity + (recursiveIds.has(method.id) ? 1 : 0),
+    exclusionNames: method.exclusionNames,
+    decoratorNames: method.decoratorNames,
+    leadingCommentText: method.leadingCommentText
   };
 }
 

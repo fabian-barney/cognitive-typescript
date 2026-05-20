@@ -26,6 +26,11 @@ export interface AnalysisCliArguments {
   agent: boolean;
   failuresOnly: boolean;
   omitRedundancy: boolean;
+  excludes: string[];
+  excludeNames: string[];
+  excludeDecorators: string[];
+  excludeComments: string[];
+  useDefaultExclusions: boolean;
   output?: string;
   junitReport?: string;
 }
@@ -52,9 +57,29 @@ export interface AnalyzeProjectOptions {
   projectRoot?: string;
   explicitPaths?: string[];
   changedOnly?: boolean;
+  excludes?: string[];
+  excludeNames?: string[];
+  excludeDecorators?: string[];
+  excludeComments?: string[];
+  useDefaultExclusions?: boolean;
   threshold?: number;
   stdout?: Writer;
   stderr?: Writer;
+}
+
+export interface SourceExclusionAuditCount {
+  reason: string;
+  count: number;
+}
+
+export interface SourceExclusionAudit {
+  discoveredFiles: number;
+  analyzedFiles: number;
+  analyzedFunctions: number;
+  excludedFiles: number;
+  excludedFunctions: number;
+  excludedFileReasons: SourceExclusionAuditCount[];
+  excludedFunctionReasons: SourceExclusionAuditCount[];
 }
 
 export interface AnalysisResult {
@@ -63,6 +88,7 @@ export interface AnalysisResult {
   threshold: number;
   thresholdExceeded: boolean;
   selectedFiles: string[];
+  exclusionAudit: SourceExclusionAudit;
   warnings: string[];
 }
 
@@ -72,9 +98,11 @@ export interface PublishAnalysisReportsOptions {
   metrics: MethodMetrics[];
   format: ReportFormat;
   threshold: number;
+  exclusionAudit?: SourceExclusionAudit;
   agent?: boolean;
   failuresOnly?: boolean;
   omitRedundancy?: boolean;
+  includePrimaryExclusionAudit?: boolean;
   output?: string;
   junitReport?: string;
   elapsedSeconds?: number;
@@ -84,6 +112,11 @@ export interface ReporterReportOptions {
   projectRoot?: string;
   changedOnly?: boolean;
   paths?: string[];
+  excludes?: string[];
+  excludeNames?: string[];
+  excludeDecorators?: string[];
+  excludeComments?: string[];
+  useDefaultExclusions?: boolean;
   format?: ReportFormat;
   agent?: boolean;
   failuresOnly?: boolean;
@@ -100,6 +133,11 @@ export interface ResolvedReporterReportOptions {
   projectRoot: string;
   paths: string[];
   changedOnly: boolean;
+  excludes: string[];
+  excludeNames: string[];
+  excludeDecorators: string[];
+  excludeComments: string[];
+  useDefaultExclusions: boolean;
   format: ReportFormat;
   agent: boolean;
   failuresOnly: boolean | undefined;

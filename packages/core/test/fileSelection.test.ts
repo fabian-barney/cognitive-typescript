@@ -16,7 +16,7 @@ afterEach(async () => {
 });
 
 describe("file selection", () => {
-  it("finds TypeScript files under nested src roots and skips declarations and tests", async () => {
+  it("finds TypeScript files under nested src roots as analysis candidates", async () => {
     const projectRoot = await createTempDir("cognitive-files-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
@@ -36,7 +36,9 @@ describe("file selection", () => {
       "src/a.ts",
       "src/b.tsx",
       "src/c.mts",
-      "src/d.cts"
+      "src/d.cts",
+      "src/skip.d.ts",
+      "src/skip.test.ts"
     ]);
   });
 
@@ -52,6 +54,41 @@ describe("file selection", () => {
     const files = await expandExplicitPaths(projectRoot, ["src/root.ts", "packages/web"]);
     expect(files.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual([
       "packages/web/src/page.ts",
+      "src/root.ts"
+    ]);
+  });
+
+  it("prunes default generated/build directories during source-root discovery when requested", async () => {
+    const projectRoot = await createTempDir("cognitive-files-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "src/root.ts": "export const root = 1;\n",
+      "packages/web/src/page.ts": "export const page = 1;\n",
+      "packages/web/dist/src/generated.ts": "export const generated = 1;\n",
+      "packages/web/coverage/src/covered.ts": "export const covered = 1;\n",
+      "packages/web/.next/src/next.ts": "export const next = 1;\n"
+    });
+
+    const files = await findAllTypeScriptFilesUnderSourceRoots(projectRoot, {
+      pruneDefaultExcludedDirectories: true
+    });
+    expect(files.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual([
+      "packages/web/src/page.ts",
+      "src/root.ts"
+    ]);
+  });
+
+  it("does not prune build-output src roots when discovery pruning is disabled", async () => {
+    const projectRoot = await createTempDir("cognitive-files-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "src/root.ts": "export const root = 1;\n",
+      "packages/web/dist/src/generated.ts": "export const generated = 1;\n"
+    });
+
+    const files = await findAllTypeScriptFilesUnderSourceRoots(projectRoot);
+    expect(files.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual([
+      "packages/web/dist/src/generated.ts",
       "src/root.ts"
     ]);
   });

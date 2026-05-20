@@ -23,6 +23,7 @@ const result = await analyzeProject({ projectRoot: "." });
 console.log(formatReport(result.metrics));
 console.log(result.maxCognitiveComplexity);
 console.log(COGNITIVE_COMPLEXITY_THRESHOLD);
+console.log(result.exclusionAudit);
 ```
 
 Key exports:
@@ -34,6 +35,16 @@ Key exports:
 - `COGNITIVE_COMPLEXITY_THRESHOLD`
 
 The core returns structured metrics suitable for CI quality gates and later automation or agent integrations.
+
+`analyzeProject(...)` supports aligned source-exclusion controls:
+
+- `excludes`
+- `excludeNames`
+- `excludeDecorators`
+- `excludeComments`
+- `useDefaultExclusions`
+
+`AnalysisResult.exclusionAudit` reports discovered, analyzed, and excluded file/function counts plus per-reason tallies. Full reports and JUnit sidecars can publish that audit data directly, while compact agent primary output omits it by default.
 
 See the [main repository](https://github.com/fabian-barney/cognitive-typescript) for full documentation.
 

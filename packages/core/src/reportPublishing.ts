@@ -15,6 +15,8 @@ export async function publishAnalysisReports(options: PublishAnalysisReportsOpti
     format: options.format,
     agent: options.agent,
     threshold: options.threshold,
+    exclusionAudit: options.exclusionAudit,
+    includeExclusionAudit: options.includePrimaryExclusionAudit ?? !options.agent,
     failuresOnly: options.failuresOnly,
     omitRedundancy: options.omitRedundancy,
     elapsedSeconds: options.elapsedSeconds
@@ -32,6 +34,8 @@ export async function publishAnalysisReports(options: PublishAnalysisReportsOpti
       formatAnalysisReport(options.metrics, {
         format: "junit",
         threshold: options.threshold,
+        exclusionAudit: options.exclusionAudit,
+        includeExclusionAudit: true,
         elapsedSeconds: options.elapsedSeconds
       })
     );

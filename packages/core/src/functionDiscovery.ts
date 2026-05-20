@@ -197,6 +197,9 @@ function createInternalMethod({
     symbols: collectSymbols(symbolNodes, checker),
     fallbackNames: uniqueStrings([functionName, ...(fallbackNames ?? [])]),
     fallbackOwnerName: fallbackOwnerName ?? containerName,
+    exclusionNames: uniqueStrings(exclusionNames(containerName, functionName)),
+    decoratorNames: collectDecoratorNames(functionNode),
+    leadingCommentText: leadingCommentText(sourceFile.text, functionNode.getFullStart(), functionNode.getStart(sourceFile)),
     calls: analysis.calls
   };
 }
@@ -463,6 +466,13 @@ function toDisplayName(containerName: string | null, functionName: string): stri
   return functionName.startsWith("[") ? `${containerName}${functionName}` : `${containerName}.${functionName}`;
 }
 
+function exclusionNames(containerName: string | null, functionName: string): string[] {
+  return uniqueStrings([
+    functionName,
+    toDisplayName(containerName, functionName)
+  ]);
+}
+
 function toSourceSpan(node: ts.Node, sourceFile: ts.SourceFile): SourceSpan {
   const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
   const end = sourceFile.getLineAndCharacterOfPosition(node.end);
@@ -488,6 +498,52 @@ function normalizeFilePath(filePath: string): string {
 
 function uniqueStrings(values: string[]): string[] {
   return Array.from(new Set(values));
+}
+
+function collectDecoratorNames(node: NamedFunctionLike): string[] {
+  if (!ts.canHaveDecorators(node)) {
+    return [];
+  }
+  const decorators = ts.getDecorators(node) ?? [];
+  const names = decorators.flatMap((decorator) => decoratorNames(decorator.expression));
+  return uniqueStrings(names);
+}
+
+function decoratorNames(expression: ts.LeftHandSideExpression): string[] {
+  const target = decoratorTargetExpression(expression);
+  const fullName = decoratorNameText(target);
+  if (!fullName) {
+    return [];
+  }
+  const simple = fullName.split(".").at(-1) ?? fullName;
+  return uniqueStrings([fullName, simple]);
+}
+
+function decoratorTargetExpression(expression: ts.LeftHandSideExpression): ts.LeftHandSideExpression {
+  return ts.isCallExpression(expression) ? expression.expression : expression;
+}
+
+function decoratorNameText(expression: ts.LeftHandSideExpression): string | null {
+  if (ts.isIdentifier(expression)) {
+    return expression.text;
+  }
+  return propertyAccessName(expression);
+}
+
+function propertyAccessName(expression: ts.LeftHandSideExpression): string | null {
+  if (!ts.isPropertyAccessExpression(expression)) {
+    return null;
+  }
+  const ownerName = decoratorNameText(expression.expression);
+  return ownerName ? `${ownerName}.${expression.name.text}` : null;
+}
+
+function leadingCommentText(sourceText: string, fullStart: number, start: number): string {
+  const ranges = ts.getLeadingCommentRanges(sourceText, fullStart) ?? [];
+  return ranges
+    .filter((range) => range.end <= start)
+    .map((range) => sourceText.slice(range.pos, range.end))
+    .join("\n");
 }
 
 type DeclarativeWrapper = (ts.FunctionExpression | ts.ArrowFunction) & { body: ts.Block };

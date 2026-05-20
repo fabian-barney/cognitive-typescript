@@ -20,4 +20,26 @@ describe("resolveReporterReportOptions", () => {
       "--junit-report must not include leading or trailing whitespace"
     );
   });
+
+  it("resolves source exclusion options with the shared defaults", () => {
+    expect(resolveReporterReportOptions({
+      excludes: ["src/generated/**"],
+      excludeNames: [".*Factory$"],
+      excludeDecorators: ["Generated"],
+      excludeComments: ["@custom-generated"]
+    })).toMatchObject({
+      excludes: ["src/generated/**"],
+      excludeNames: [".*Factory$"],
+      excludeDecorators: ["Generated"],
+      excludeComments: ["@custom-generated"],
+      useDefaultExclusions: true
+    });
+  });
+
+  it("rejects blank source exclusion values like the CLI", () => {
+    expect(() => resolveReporterReportOptions({ excludes: [""] })).toThrow("--exclude requires a value");
+    expect(() => resolveReporterReportOptions({ excludeNames: [" .*Factory$"] })).toThrow(
+      "--exclude-name must not include leading or trailing whitespace"
+    );
+  });
 });

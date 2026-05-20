@@ -91,7 +91,7 @@ describe("CognitiveTypescriptJestReporter", () => {
 
   it("writes configured primary and JUnit reports through the shared pipeline", async () => {
     const projectRoot = await createProject({
-      "src/sample.ts": buildSimpleFunction("safe")
+      "src/sample.ts": `${buildSimpleFunction("safe")}\n\n${buildDeepNestedIfFunction("makeFactory", 7)}`
     });
 
     const stdout = new StringWriter();
@@ -107,6 +107,7 @@ describe("CognitiveTypescriptJestReporter", () => {
       junit: true,
       junitReport: "reports/custom-junit.xml",
       threshold: 9,
+      excludeNames: [".*Factory$"],
       stdout,
       stderr
     });
@@ -117,6 +118,7 @@ describe("CognitiveTypescriptJestReporter", () => {
     expect(stderr.toString()).toBe("");
     const primary = JSON.parse(await readText(path.join(projectRoot, "reports", "primary.json"))) as {
       threshold: number;
+      exclusions?: { excludedFunctions: number };
       methods: Array<Record<string, unknown>>;
     };
     expect(primary.threshold).toBe(9);
@@ -125,11 +127,13 @@ describe("CognitiveTypescriptJestReporter", () => {
         method: "safe"
       })
     ]);
+    expect(primary).not.toHaveProperty("exclusions");
     expect(primary.methods[0]).not.toHaveProperty("status");
     expect(existsSync(path.join(projectRoot, DEFAULT_JUNIT_REPORT))).toBe(false);
     const junit = await readText(path.join(projectRoot, "reports", "custom-junit.xml"));
     expect(junit).toContain('classname="src/sample.ts"');
     expect(junit).toContain('<property name="status" value="passed"/>');
+    expect(junit).toContain('name="exclusion.excludedFunctions" value="1"');
   });
 
   it("lets explicit agent overrides keep full output", async () => {
