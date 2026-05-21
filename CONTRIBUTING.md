@@ -18,6 +18,8 @@ Run the full Ubuntu validation command set before pushing. CI also runs Windows 
 ```bash
 npm ci
 npm run build
+npm run lint
+npm run format:check
 npm test
 npm run cognitive-typescript-check
 npm run crap-typescript-check

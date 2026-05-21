@@ -142,7 +142,8 @@ export const registry = {
     tempDirs.push(projectRoot);
     const filePath = path.join(projectRoot, "sample.ts");
     await writeProjectFiles(projectRoot, {
-      "sample.ts": "\uFEFF#!/usr/bin/env node\n\n// @generated\n/* generated header */\nexport function sample() {\n  return 1;\n}\n"
+      "sample.ts":
+        "\uFEFF#!/usr/bin/env node\n\n// @generated\n/* generated header */\nexport function sample() {\n  return 1;\n}\n"
     });
 
     const [parsed] = await analyzeTypeScriptFiles([filePath]);

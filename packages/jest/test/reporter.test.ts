@@ -160,10 +160,12 @@ describe("CognitiveTypescriptJestReporter", () => {
       methods: Array<Record<string, unknown>>;
     };
     expect(primary.methods).toHaveLength(2);
-    expect(primary.methods).toEqual(expect.arrayContaining([
-      expect.objectContaining({ method: "safe", status: "passed" }),
-      expect.objectContaining({ method: "tooComplex", status: "failed" })
-    ]));
+    expect(primary.methods).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ method: "safe", status: "passed" }),
+        expect.objectContaining({ method: "tooComplex", status: "failed" })
+      ])
+    );
     expect(stderr.toString()).toContain("Cognitive Complexity threshold exceeded");
     expect(process.exitCode).toBe(2);
   });

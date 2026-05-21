@@ -21,11 +21,15 @@ export async function findAllTypeScriptFilesUnderSourceRoots(
   options: FileSelectionOptions = {}
 ): Promise<string[]> {
   const files = new Set<string>();
-  await walkForSourceRoots(projectRoot, async (sourceRoot) => {
-    await walkSourceTree(sourceRoot, async (filePath) => {
-      files.add(path.resolve(filePath));
-    });
-  }, options);
+  await walkForSourceRoots(
+    projectRoot,
+    async (sourceRoot) => {
+      await walkSourceTree(sourceRoot, async (filePath) => {
+        files.add(path.resolve(filePath));
+      });
+    },
+    options
+  );
   return Array.from(files).sort();
 }
 
@@ -92,21 +96,39 @@ function collectChangedFile(projectRoot: string, entry: GitStatusEntry, files: S
 
 function collectChangedFilesFromStatus(projectRoot: string, entries: string[]): Set<string> {
   const files = new Set<string>();
-  for (let index = 0; index < entries.length; index += 1) {
-    const entry = parseGitStatusEntry(entries[index]);
-    if (!entry) {
-      continue;
-    }
-    const renameOrCopyDestination = isRenameOrCopyStatus(entry.status) ? entries[index + 1] : undefined;
-    if (renameOrCopyDestination) {
-      entry.pathValue = renameOrCopyDestination;
-    }
-    collectChangedFile(projectRoot, entry, files);
-    if (isRenameOrCopyStatus(entry.status)) {
-      index += 1;
-    }
+  for (let index = 0; index < entries.length; ) {
+    index += collectChangedEntry(projectRoot, entries, index, files);
   }
   return files;
+}
+
+function collectChangedEntry(projectRoot: string, entries: string[], index: number, files: Set<string>): number {
+  const rawEntry = entries[index];
+  if (rawEntry === undefined) {
+    return 1;
+  }
+  const entry = parseGitStatusEntry(rawEntry);
+  if (!entry) {
+    return 1;
+  }
+  const step = renameOrCopyEntryStep(entry.status);
+  updateRenameOrCopyDestination(entry, entries, index, step);
+  collectChangedFile(projectRoot, entry, files);
+  return step;
+}
+
+function renameOrCopyEntryStep(status: string): number {
+  return isRenameOrCopyStatus(status) ? 2 : 1;
+}
+
+function updateRenameOrCopyDestination(entry: GitStatusEntry, entries: string[], index: number, step: number): void {
+  if (step === 1) {
+    return;
+  }
+  const renameOrCopyDestination = entries[index + 1];
+  if (renameOrCopyDestination !== undefined) {
+    entry.pathValue = renameOrCopyDestination;
+  }
 }
 
 function isUnderSourceTree(projectRoot: string, filePath: string): boolean {
@@ -130,21 +152,15 @@ function hasDeclarationFileSuffix(normalizedPath: string): boolean {
   return hasAnySuffix(normalizedPath, DECLARATION_FILE_SUFFIXES);
 }
 
-async function readChangedFileStatusEntries(
-  projectRoot: string,
-  commandRunner: CommandRunner
-): Promise<string[]> {
-  const result = await commandRunner(
-    "git",
-    ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
-    projectRoot,
-    {
-      timeoutMs: GIT_STATUS_TIMEOUT_MS,
-      maxOutputBytes: MAX_CAPTURED_GIT_OUTPUT_BYTES
-    }
-  );
+async function readChangedFileStatusEntries(projectRoot: string, commandRunner: CommandRunner): Promise<string[]> {
+  const result = await commandRunner("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"], projectRoot, {
+    timeoutMs: GIT_STATUS_TIMEOUT_MS,
+    maxOutputBytes: MAX_CAPTURED_GIT_OUTPUT_BYTES
+  });
   if (result.timedOut) {
-    throw new Error(`${GIT_STATUS_COMMAND_DESCRIPTION} timed out after ${GIT_STATUS_TIMEOUT_MS}ms${formatCommandContext(result)}`);
+    throw new Error(
+      `${GIT_STATUS_COMMAND_DESCRIPTION} timed out after ${GIT_STATUS_TIMEOUT_MS}ms${formatCommandContext(result)}`
+    );
   }
   if (result.exitCode !== 0) {
     throw new Error(readChangedFileStatusError(result));
@@ -217,10 +233,7 @@ function classifySourceRootEntry(
   return lowerName === "src" ? "source-root" : "descend";
 }
 
-async function walkSourceTree(
-  currentDir: string,
-  onFile: (filePath: string) => Promise<void>
-): Promise<void> {
+async function walkSourceTree(currentDir: string, onFile: (filePath: string) => Promise<void>): Promise<void> {
   const entries = await readdir(currentDir, { withFileTypes: true });
   for (const entry of entries) {
     if (entry.isSymbolicLink()) {
@@ -267,14 +280,20 @@ async function expandDirectoryPath(
     return;
   }
 
-  await walkForSourceRoots(directoryPath, async (sourceRoot) => {
-    await walkSourceTree(sourceRoot, async (filePath) => {
-      files.add(path.resolve(filePath));
-    });
-  }, options);
+  await walkForSourceRoots(
+    directoryPath,
+    async (sourceRoot) => {
+      await walkSourceTree(sourceRoot, async (filePath) => {
+        files.add(path.resolve(filePath));
+      });
+    },
+    options
+  );
 }
 
 function shouldPruneDiscoveryDirectory(entryName: string, options: FileSelectionOptions): boolean {
-  return Boolean(options.pruneDefaultExcludedDirectories)
-    && DEFAULT_EXCLUDED_SOURCE_ROOT_DISCOVERY_DIRECTORIES.has(entryName);
+  return (
+    Boolean(options.pruneDefaultExcludedDirectories) &&
+    DEFAULT_EXCLUDED_SOURCE_ROOT_DISCOVERY_DIRECTORIES.has(entryName)
+  );
 }

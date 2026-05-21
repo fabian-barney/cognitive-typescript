@@ -37,6 +37,12 @@ jobs:
       - name: Render release notes
         run: node ./scripts/render-release-notes.mjs "${GITHUB_REF_NAME}" > release-notes.md
 
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run format check
+        run: npm run format:check
+
       - name: Run tests
         run: npm test
 

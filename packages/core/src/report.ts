@@ -1,12 +1,7 @@
 import { XMLBuilder } from "fast-xml-parser";
 
 import { COGNITIVE_COMPLEXITY_THRESHOLD, validateThreshold } from "./constants";
-import type {
-  MethodMetrics,
-  ReportFormat,
-  ReportStatus,
-  SourceExclusionAudit
-} from "./types";
+import type { MethodMetrics, ReportFormat, ReportStatus, SourceExclusionAudit } from "./types";
 
 const METHOD_COLUMNS = ["status", "cc", "method", "src", "lineStart", "lineEnd"] as const;
 const COMPACT_METHOD_COLUMNS = ["cc", "method", "src", "lineStart", "lineEnd"] as const;
@@ -51,8 +46,8 @@ export interface FormatAnalysisReportOptions {
 type SerializableReport = AnalysisReport | CompactAnalysisReport;
 type ReportValue = string | number;
 type ReportFormatter = (report: SerializableReport, omitMethodStatus: boolean, elapsedSeconds: number) => string;
-type MethodColumn = typeof METHOD_COLUMNS[number];
-type CompactMethodColumn = typeof COMPACT_METHOD_COLUMNS[number];
+type MethodColumn = (typeof METHOD_COLUMNS)[number];
+type CompactMethodColumn = (typeof COMPACT_METHOD_COLUMNS)[number];
 type XmlNode = Record<string, unknown>;
 
 const REPORT_FORMATTERS: Record<ReportFormat, ReportFormatter> = {
@@ -147,9 +142,7 @@ export function formatReport(metrics: MethodMetrics[]): string {
 }
 
 export function formatToonReport(report: SerializableReport, omitMethodStatus = false): string {
-  const toonReport = omitMethodStatus && reportHasMethodStatus(report)
-    ? omitMethodStatuses(report)
-    : report;
+  const toonReport = omitMethodStatus && reportHasMethodStatus(report) ? omitMethodStatuses(report) : report;
   return encodeToonReport(toonReport);
 }
 
@@ -162,12 +155,14 @@ export function formatTextReport(report: SerializableReport, omitMethodStatus = 
   const includeStatus = !omitMethodStatus && reportHasMethodStatus(report);
   const columns = includeStatus ? METHOD_COLUMNS : COMPACT_METHOD_COLUMNS;
   const rows = includeStatus
-    ? report.methods.map((method) => METHOD_COLUMNS.map((column) => formatTextValue(method[column])))
+    ? report.methods.map((method) =>
+        METHOD_COLUMNS.map((column) => formatTextValue(readMethodColumnValue(method, column)))
+      )
     : (report as CompactAnalysisReport).methods.map((method) =>
-      COMPACT_METHOD_COLUMNS.map((column) => formatTextValue(method[column]))
-    );
+        COMPACT_METHOD_COLUMNS.map((column) => formatTextValue(readMethodColumnValue(method, column)))
+      );
   const widths = columns.map((column, index) =>
-    rows.reduce((max, row) => Math.max(max, row[index].length), column.length)
+    rows.reduce((max, row) => Math.max(max, readIndexedValue(row, index).length), column.length)
   );
   const headerLine = formatTextRow([...columns], widths, columns);
   const separator = formatTextSeparator(widths);
@@ -176,12 +171,10 @@ export function formatTextReport(report: SerializableReport, omitMethodStatus = 
   return [...summary, "", headerLine, separator, ...body, ...exclusionTextLines(report.exclusions)].join("\n") + "\n";
 }
 
-export function formatJunitReport(
-  report: AnalysisReport,
-  omitRedundancy = false,
-  elapsedSeconds = 0
-): string {
-  return `${formatXmlDeclaration()}\n${createXmlBuilder().build(toJunitXml(report, omitRedundancy, elapsedSeconds)).trimEnd()}\n`;
+export function formatJunitReport(report: AnalysisReport, omitRedundancy = false, elapsedSeconds = 0): string {
+  return `${formatXmlDeclaration()}\n${createXmlBuilder()
+    .build(toJunitXml(report, omitRedundancy, elapsedSeconds))
+    .trimEnd()}\n`;
 }
 
 function toMethodReportEntry(metric: MethodMetrics, threshold: number): MethodReportEntry {
@@ -203,7 +196,11 @@ function omitMethodStatuses(report: AnalysisReport): CompactAnalysisReport {
   return {
     status: report.status,
     threshold: report.threshold,
-    methods: report.methods.map(({ status: _status, ...method }) => method),
+    methods: report.methods.map((method) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- omit status from compact report entries
+      const { status: _status, ...compactMethod } = method;
+      return compactMethod;
+    }),
     ...optionalExclusions(report.exclusions)
   };
 }
@@ -231,7 +228,7 @@ function formatTextRow(
   widths: number[],
   columns: readonly (MethodColumn | CompactMethodColumn)[] = METHOD_COLUMNS
 ): string {
-  return `| ${values.map((value, index) => formatTextCell(value, widths[index], columns[index])).join(" | ")} |`;
+  return `| ${values.map((value, index) => formatTextCell(value, readIndexedValue(widths, index), readIndexedValue(columns, index))).join(" | ")} |`;
 }
 
 function formatTextCell(value: string, width: number, column: MethodColumn | CompactMethodColumn): string {
@@ -245,15 +242,17 @@ function formatTextSeparator(widths: number[]): string {
 function encodeToonReport(report: SerializableReport): string {
   const columns = reportHasMethodStatus(report) ? METHOD_COLUMNS : COMPACT_METHOD_COLUMNS;
   const rows = report.methods.map((method) =>
-    columns.map((column) => toonValue((method as Record<string, ReportValue>)[column])).join(",")
+    columns.map((column) => toonValue(readMethodColumnValue(method, column))).join(",")
   );
-  return [
-    `status: ${report.status}`,
-    `threshold: ${report.threshold}`,
-    `methods[${report.methods.length}]${report.methods.length === 0 ? "" : `{${columns.join(",")}}`}:`,
-    ...rows.map((row) => `  ${row}`),
-    ...toonExclusionLines(report.exclusions)
-  ].join("\n") + "\n";
+  return (
+    [
+      `status: ${report.status}`,
+      `threshold: ${report.threshold}`,
+      `methods[${report.methods.length}]${report.methods.length === 0 ? "" : `{${columns.join(",")}}`}:`,
+      ...rows.map((row) => `  ${row}`),
+      ...toonExclusionLines(report.exclusions)
+    ].join("\n") + "\n"
+  );
 }
 
 function toonValue(value: ReportValue): string {
@@ -439,4 +438,32 @@ function appendExclusionReasonLines(
 
 function sanitizePropertyName(value: string): string {
   return value.replace(/[^A-Za-z0-9_.-]/g, "_");
+}
+
+function readMethodColumnValue(
+  method: MethodReportEntry | CompactMethodReportEntry,
+  column: MethodColumn | CompactMethodColumn
+): ReportValue {
+  switch (column) {
+    case "status":
+      return (method as MethodReportEntry).status;
+    case "cc":
+      return method.cc;
+    case "method":
+      return method.method;
+    case "src":
+      return method.src;
+    case "lineStart":
+      return method.lineStart;
+    case "lineEnd":
+      return method.lineEnd;
+  }
+}
+
+function readIndexedValue<T>(values: readonly T[], index: number): T {
+  const value = values[index];
+  if (value === undefined) {
+    throw new Error("Internal report formatting error: inconsistent table state");
+  }
+  return value;
 }

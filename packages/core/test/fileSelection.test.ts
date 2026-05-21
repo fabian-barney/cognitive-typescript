@@ -124,26 +124,21 @@ describe("file selection", () => {
     });
 
     const changed = await changedTypeScriptFilesUnderSourceRoots(projectRoot);
-    expect(changed.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual([
-      "src/changed.ts"
-    ]);
+    expect(changed.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual(["src/changed.ts"]);
   });
 
   it("prefers the destination path for renamed or copied src files", async () => {
     const projectRoot = await createTempDir("cognitive-files-");
     tempDirs.push(projectRoot);
 
-    const changed = await changedTypeScriptFilesUnderSourceRoots(
-      projectRoot,
-      async () => ({
-        exitCode: 0,
-        stdout: "R  src/old-name.ts\0src/new-name.ts\0C  src/original.ts\0src/copied.ts\0",
-        stderr: "",
-        stdoutComplete: true,
-        stderrComplete: true,
-        timedOut: false
-      })
-    );
+    const changed = await changedTypeScriptFilesUnderSourceRoots(projectRoot, async () => ({
+      exitCode: 0,
+      stdout: "R  src/old-name.ts\0src/new-name.ts\0C  src/original.ts\0src/copied.ts\0",
+      stderr: "",
+      stdoutComplete: true,
+      stderrComplete: true,
+      timedOut: false
+    }));
 
     expect(changed.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual([
       "src/copied.ts",
@@ -161,78 +156,68 @@ describe("file selection", () => {
     await writeProjectFiles(linkedRoot, {
       "src/linked.ts": "export const linked = 1;\n"
     });
-    await symlink(
-      linkedRoot,
-      path.join(projectRoot, "linked"),
-      process.platform === "win32" ? "junction" : "dir"
-    );
+    await symlink(linkedRoot, path.join(projectRoot, "linked"), process.platform === "win32" ? "junction" : "dir");
 
     const discovered = await findAllTypeScriptFilesUnderSourceRoots(projectRoot);
-    expect(discovered.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual([
-      "src/root.ts"
-    ]);
+    expect(discovered.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual(["src/root.ts"]);
 
     const expanded = await expandExplicitPaths(projectRoot, ["linked"]);
     expect(expanded).toEqual([]);
   });
 
   it("reports git status timeouts with captured context", async () => {
-    await expect(changedTypeScriptFilesUnderSourceRoots(
-      "C:/repo",
-      async () => ({
+    await expect(
+      changedTypeScriptFilesUnderSourceRoots("C:/repo", async () => ({
         exitCode: 1,
         stdout: "partial stdout",
         stderr: "partial stderr",
         stdoutComplete: true,
         stderrComplete: true,
         timedOut: true
-      })
-    )).rejects.toThrow(
+      }))
+    ).rejects.toThrow(
       "git status --porcelain=v1 -z --untracked-files=all timed out after 30000ms (stdout: partial stdout; stderr: partial stderr)"
     );
   });
 
   it("rejects incomplete git status output on success", async () => {
-    await expect(changedTypeScriptFilesUnderSourceRoots(
-      "C:/repo",
-      async () => ({
+    await expect(
+      changedTypeScriptFilesUnderSourceRoots("C:/repo", async () => ({
         exitCode: 0,
         stdout: "?? src/generated.ts [output truncated]",
         stderr: "",
         stdoutComplete: false,
         stderrComplete: true,
         timedOut: false
-      })
-    )).rejects.toThrow(
+      }))
+    ).rejects.toThrow(
       "could not fully capture git status --porcelain=v1 -z --untracked-files=all output; refusing incomplete changed-file detection"
     );
   });
 
   it("sanitizes NUL bytes in git status error context", async () => {
-    await expect(changedTypeScriptFilesUnderSourceRoots(
-      "C:/repo",
-      async () => ({
+    await expect(
+      changedTypeScriptFilesUnderSourceRoots("C:/repo", async () => ({
         exitCode: 0,
         stdout: "?? src/added.ts\0M  src/changed.ts\0",
         stderr: "",
         stdoutComplete: false,
         stderrComplete: true,
         timedOut: false
-      })
-    )).rejects.toThrow("stdout: ?? src/added.ts\\0M  src/changed.ts\\0");
+      }))
+    ).rejects.toThrow("stdout: ?? src/added.ts\\0M  src/changed.ts\\0");
   });
 
   it("surfaces git status failures from stderr or stdout", async () => {
-    await expect(changedTypeScriptFilesUnderSourceRoots(
-      "C:/repo",
-      async () => ({
+    await expect(
+      changedTypeScriptFilesUnderSourceRoots("C:/repo", async () => ({
         exitCode: 1,
         stdout: "stdout fallback",
         stderr: "",
         stdoutComplete: true,
         stderrComplete: true,
         timedOut: false
-      })
-    )).rejects.toThrow("stdout fallback");
+      }))
+    ).rejects.toThrow("stdout fallback");
   });
 });

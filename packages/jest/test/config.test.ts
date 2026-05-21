@@ -6,10 +6,7 @@ describe("withCognitiveTypescriptJest", () => {
   it("adds the default reporter and the cognitive reporter entry when config is empty", () => {
     const config = withCognitiveTypescriptJest();
 
-    expect(config.reporters).toEqual([
-      "default",
-      [expect.any(String), {}]
-    ]);
+    expect(config.reporters).toEqual(["default", [expect.any(String), {}]]);
   });
 
   it("preserves existing reporters and appends the cognitive reporter", () => {
@@ -17,11 +14,7 @@ describe("withCognitiveTypescriptJest", () => {
       reporters: ["default", "summary"]
     });
 
-    expect(config.reporters).toEqual([
-      "default",
-      "summary",
-      [expect.any(String), {}]
-    ]);
+    expect(config.reporters).toEqual(["default", "summary", [expect.any(String), {}]]);
   });
 
   it("forwards configured reporter options without mutating coverage settings", () => {
@@ -40,9 +33,6 @@ describe("withCognitiveTypescriptJest", () => {
 
     expect(config.collectCoverage).toBe(true);
     expect(config.coverageDirectory).toBe("coverage");
-    expect(config.reporters).toEqual([
-      "default",
-      [expect.any(String), options]
-    ]);
+    expect(config.reporters).toEqual(["default", [expect.any(String), options]]);
   });
 });

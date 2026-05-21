@@ -31,10 +31,7 @@ export async function copyFixture(name: string): Promise<string> {
   return tempDir;
 }
 
-export async function writeProjectFiles(
-  rootDir: string,
-  files: Record<string, string>
-): Promise<void> {
+export async function writeProjectFiles(rootDir: string, files: Record<string, string>): Promise<void> {
   for (const [relativePath, content] of Object.entries(files)) {
     const targetPath = path.join(rootDir, relativePath);
     await mkdir(path.dirname(targetPath), { recursive: true });

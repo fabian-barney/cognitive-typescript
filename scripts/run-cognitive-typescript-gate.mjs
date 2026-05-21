@@ -18,10 +18,14 @@ if (!existsSync(cliEntryPoint)) {
   process.exit(1);
 }
 
-const result = spawnSync(process.execPath, [cliEntryPoint, ...targets.map((target) => resolve(repositoryRoot, target))], {
-  cwd: repositoryRoot,
-  stdio: "inherit"
-});
+const result = spawnSync(
+  process.execPath,
+  [cliEntryPoint, ...targets.map((target) => resolve(repositoryRoot, target))],
+  {
+    cwd: repositoryRoot,
+    stdio: "inherit"
+  }
+);
 
 if (result.error) {
   console.error(result.error.message);

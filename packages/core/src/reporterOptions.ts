@@ -1,7 +1,7 @@
 import path from "node:path";
 
 import { COGNITIVE_COMPLEXITY_THRESHOLD } from "./constants";
-import type { ReportFormat, ReporterReportOptions, ResolvedReporterReportOptions, Writer } from "./types";
+import type { ReportFormat, ReporterReportOptions, ResolvedReporterReportOptions } from "./types";
 
 export const DEFAULT_JUNIT_REPORT = path.join("reports", "cognitive-typescript", "TEST-cognitive-typescript.xml");
 

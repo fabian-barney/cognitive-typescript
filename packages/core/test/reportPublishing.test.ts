@@ -46,10 +46,7 @@ describe("deleteOwnedReportFile", () => {
     const reportPath = path.join("reports", "cognitive-typescript", "TEST-cognitive-typescript.xml");
     const absolutePath = path.join(projectRoot, reportPath);
     await mkdir(path.dirname(absolutePath), { recursive: true });
-    await writeFile(
-      absolutePath,
-      '<?xml version="1.0" encoding="UTF-8"?><testsuites name="other-tool"></testsuites>'
-    );
+    await writeFile(absolutePath, '<?xml version="1.0" encoding="UTF-8"?><testsuites name="other-tool"></testsuites>');
 
     await deleteOwnedReportFile(projectRoot, reportPath);
 

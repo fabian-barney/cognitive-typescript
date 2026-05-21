@@ -9,13 +9,43 @@ permissions:
   contents: read
 
 jobs:
+  lint-and-format:
+    name: Lint and Format (Node ${{ matrix.node-version }}, ubuntu-latest)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["22.13.0", "24.0.0"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Set up npm 11.14.1
+        run: npm install --global npm@11.14.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run format check
+        run: npm run format:check
+
   windows-build:
     name: Build and Test (Node ${{ matrix.node-version }}, windows-latest)
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        node-version: ["22.12.0", "24.0.0"]
+        node-version: ["22.13.0", "24.0.0"]
 
     steps:
       - name: Checkout
@@ -37,17 +67,17 @@ jobs:
         run: npm test
 
   ubuntu-build-node-22:
-    name: Build and Test (Node 22.12.0, ubuntu-latest)
+    name: Build and Test (Node 22.13.0, ubuntu-latest)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Node 22.12.0
+      - name: Set up Node 22.13.0
         uses: actions/setup-node@v6
         with:
-          node-version: "22.12.0"
+          node-version: "22.13.0"
           cache: npm
 
       - name: Set up npm 11.14.1
@@ -94,7 +124,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: ["22.12.0", "24.0.0"]
+        node-version: ["22.13.0", "24.0.0"]
 
     steps:
       - name: Checkout
@@ -119,7 +149,7 @@ jobs:
         run: npm run cognitive-typescript-check
 
   crap-typescript-gate-node-22:
-    name: crap-typescript Gate (Node 22.12.0)
+    name: crap-typescript Gate (Node 22.13.0)
     runs-on: ubuntu-latest
     needs: [ubuntu-build-node-22]
 
@@ -127,10 +157,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Node 22.12.0
+      - name: Set up Node 22.13.0
         uses: actions/setup-node@v6
         with:
-          node-version: "22.12.0"
+          node-version: "22.13.0"
           cache: npm
 
       - name: Set up npm 11.14.1
@@ -166,17 +196,3 @@ jobs:
       - name: Run crap-typescript gate
         run: npm run crap-typescript-check
 
-  crap-typescript-gate-required:
-    name: crap-typescript Gate
-    runs-on: ubuntu-latest
-    needs: [crap-typescript-gate-node-22, crap-typescript-gate-node-24]
-    if: ${{ always() }}
-
-    steps:
-      - name: Require the matrix CRAP gate to pass
-        shell: bash
-        run: |
-          if [ "${{ needs.crap-typescript-gate-node-22.result }}" != "success" ] || [ "${{ needs.crap-typescript-gate-node-24.result }}" != "success" ]; then
-            echo "The matrix crap-typescript gate did not complete successfully." >&2
-            exit 1
-          fi

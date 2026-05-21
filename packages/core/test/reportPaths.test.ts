@@ -19,9 +19,9 @@ describe("reportPaths", () => {
       "package.json": '{"name":"fixture","private":true}'
     });
 
-    await expect(validateReportPathTargets(projectRoot, [
-      { label: "--output", path: "reports/nested/result.json" }
-    ])).resolves.toBeUndefined();
+    await expect(
+      validateReportPathTargets(projectRoot, [{ label: "--output", path: "reports/nested/result.json" }])
+    ).resolves.toBeUndefined();
   });
 
   it("rejects project-root, filesystem-root, and directory targets", async () => {
@@ -32,16 +32,16 @@ describe("reportPaths", () => {
       "reports/.gitkeep": ""
     });
 
-    await expect(validateReportPathTargets(projectRoot, [
-      { label: "--output", path: "." }
-    ])).rejects.toThrow("--output must target a report file, not the project root");
+    await expect(validateReportPathTargets(projectRoot, [{ label: "--output", path: "." }])).rejects.toThrow(
+      "--output must target a report file, not the project root"
+    );
 
-    await expect(validateReportPathTargets(projectRoot, [
-      { label: "--output", path: path.parse(projectRoot).root }
-    ])).rejects.toThrow("--output must target a report file, not a filesystem root");
+    await expect(
+      validateReportPathTargets(projectRoot, [{ label: "--output", path: path.parse(projectRoot).root }])
+    ).rejects.toThrow("--output must target a report file, not a filesystem root");
 
-    await expect(validateReportPathTargets(projectRoot, [
-      { label: "--output", path: "reports" }
-    ])).rejects.toThrow("--output must target a report file, not an existing directory");
+    await expect(validateReportPathTargets(projectRoot, [{ label: "--output", path: "reports" }])).rejects.toThrow(
+      "--output must target a report file, not an existing directory"
+    );
   });
 });

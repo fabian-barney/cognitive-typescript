@@ -73,17 +73,19 @@ function resolveCallTargets(
   methodsByName: Map<string, Set<string>>,
   methodsByOwnerAndName: Map<string, Set<string>>
 ): Set<string> {
-  return resolveDirectCallTargets(call, methodsBySymbol)
-    ?? resolveOwnerCallTargets(call, methodsByOwnerAndName)
-    ?? resolveNamedCallTargets(call, method, methodsByName)
-    ?? new Set();
+  return (
+    resolveDirectCallTargets(call, methodsBySymbol) ??
+    resolveOwnerCallTargets(call, methodsByOwnerAndName) ??
+    resolveNamedCallTargets(call, method, methodsByName) ??
+    new Set()
+  );
 }
 
 function resolveDirectCallTargets(
   call: InternalMethod["calls"][number],
   methodsBySymbol: Map<ts.Symbol, Set<string>>
 ): Set<string> | null {
-  return call.symbol ? methodsBySymbol.get(call.symbol) ?? null : null;
+  return call.symbol ? (methodsBySymbol.get(call.symbol) ?? null) : null;
 }
 
 function resolveOwnerCallTargets(
@@ -322,23 +324,20 @@ function updateLowLinkFromStackTarget(
   lowLinkByNode.set(node, Math.min(lowLinkByNode.get(node)!, indexByNode.get(target)!));
 }
 
-function isComponentRoot(
-  node: string,
-  indexByNode: Map<string, number>,
-  lowLinkByNode: Map<string, number>
-): boolean {
+function isComponentRoot(node: string, indexByNode: Map<string, number>, lowLinkByNode: Map<string, number>): boolean {
   return lowLinkByNode.get(node) === indexByNode.get(node);
 }
 
 function popComponent(node: string, stack: string[], onStack: Set<string>): string[] {
   const component: string[] = [];
-  let member = "";
-  do {
-    member = stack.pop()!;
+  while (true) {
+    const member = stack.pop()!;
     onStack.delete(member);
     component.push(member);
-  } while (member !== node);
-  return component;
+    if (member === node) {
+      return component;
+    }
+  }
 }
 
 function markRecursiveComponent(
@@ -352,17 +351,19 @@ function markRecursiveComponent(
     });
     return;
   }
-  if (edges.get(component[0])?.has(component[0])) {
-    recursiveMembers.add(component[0]);
+  const member = component[0];
+  if (member !== undefined && edges.get(member)?.has(member)) {
+    recursiveMembers.add(member);
   }
 }
 
 function formatDiagnostics(diagnostics: readonly ts.Diagnostic[]): string {
   const lines = diagnostics.map((diagnostic) => {
     const filePath = diagnostic.file ? normalizeFilePath(diagnostic.file.fileName) : "<unknown>";
-    const position = diagnostic.file && diagnostic.start !== undefined
-      ? diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start)
-      : { line: 0, character: 0 };
+    const position =
+      diagnostic.file && diagnostic.start !== undefined
+        ? diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start)
+        : { line: 0, character: 0 };
     const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
     return `${filePath}:${position.line + 1}:${position.character + 1}: ${message}`;
   });

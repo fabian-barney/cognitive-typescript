@@ -14,7 +14,7 @@
     "url": "https://github.com/fabian-barney/cognitive-typescript/issues"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.13.0"
   },
   "packageManager": "npm@11.14.1",
   "workspaces": [
@@ -24,6 +24,9 @@
     "build": "tsc -b packages/core packages/cli packages/vitest packages/jest",
     "cognitive-typescript-check": "node ./scripts/run-cognitive-typescript-gate.mjs packages",
     "crap-typescript-check": "npm run build && vitest run --config vitest.crap.config.ts",
+    "lint": "eslint . --max-warnings=0",
+    "format:check": "prettier --check \"package*.json\" \"tsconfig*.json\" \"*.mjs\" \"*.ts\" \"packages/**/package.json\" \"packages/**/*.ts\" \"scripts/**/*.mjs\"",
+    "format:write": "prettier --write \"package*.json\" \"tsconfig*.json\" \"*.mjs\" \"*.ts\" \"packages/**/package.json\" \"packages/**/*.ts\" \"scripts/**/*.mjs\"",
     "test": "npm run build && vitest run",
     "pack": "npm pack --workspaces",
     "render-release-notes": "node ./scripts/render-release-notes.mjs",
@@ -31,11 +34,17 @@
   },
   "devDependencies": {
     "@barney-media/crap-typescript-vitest": "^0.3.0",
+    "@eslint/js": "^9.39.4",
     "@types/node": "^25.6.2",
     "@vitest/coverage-v8": "^4.1.5",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.6.0",
     "jest": "^30.4.2",
+    "prettier": "^3.8.3",
     "ts-jest": "^29.4.9",
     "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.4",
     "vitest": "^4.1.5"
   }
 }

@@ -20,11 +20,13 @@ It performs pure static analysis using the Sonar Cognitive Complexity white pape
 
 ## Build and Test
 
-CI validates the repository on Ubuntu and Windows with Node `22.12.0` and `24.0.0`. Ubuntu enforces the full build, test, gate, and packaging command set; Windows independently validates build/test behavior. Locally, run the full Ubuntu command set before opening or updating a pull request:
+CI validates the repository on Ubuntu and Windows with Node `22.13.0` and `24.0.0`. Ubuntu enforces the full build, test, gate, and packaging command set; Windows independently validates build/test behavior. Locally, run the full Ubuntu command set before opening or updating a pull request:
 
 ```bash
 npm ci
 npm run build
+npm run lint
+npm run format:check
 npm test
 npm run cognitive-typescript-check
 npm run crap-typescript-check
@@ -33,6 +35,8 @@ npm pack --workspaces
 
 `npm run cognitive-typescript-check` runs the repository through its own Cognitive Complexity gate for the published package sources under `packages/`.
 `npm run crap-typescript-check` runs the repository through a CRAP gate using the published Vitest adapter for the package sources under `packages/`.
+`npm run lint` enforces the repository ESLint baseline.
+`npm run format:check` verifies the Prettier-managed source and configuration surface, and `npm run format:write` updates it locally.
 
 ## Install
 

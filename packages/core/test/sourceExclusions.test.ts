@@ -88,11 +88,13 @@ describe("source exclusions", () => {
 
     expect(result.thresholdExceeded).toBe(false);
     expect(result.metrics.map((metric) => metric.displayName)).toEqual(["safe"]);
-    expect(result.exclusionAudit.excludedFileReasons).toEqual(expect.arrayContaining([
-      { reason: "default:path:declaration-file", count: 1 },
-      { reason: "default:path:test-directory", count: 1 },
-      { reason: "default:path:test-file", count: 1 }
-    ]));
+    expect(result.exclusionAudit.excludedFileReasons).toEqual(
+      expect.arrayContaining([
+        { reason: "default:path:declaration-file", count: 1 },
+        { reason: "default:path:test-directory", count: 1 },
+        { reason: "default:path:test-file", count: 1 }
+      ])
+    );
   });
 
   it("applies configured name, decorator, and comment exclusions before threshold evaluation", async () => {
@@ -139,18 +141,20 @@ ${nestedIfBody(7, 2)}
       analyzedFunctions: 1,
       excludedFunctions: 3
     });
-    expect(result.exclusionAudit.excludedFunctionReasons).toEqual(expect.arrayContaining([
-      { reason: "user:comment:@custom-generated", count: 1 },
-      { reason: "user:decorator:Generated", count: 1 },
-      { reason: "user:name:.*Factory$", count: 1 }
-    ]));
+    expect(result.exclusionAudit.excludedFunctionReasons).toEqual(
+      expect.arrayContaining([
+        { reason: "user:comment:@custom-generated", count: 1 },
+        { reason: "user:decorator:Generated", count: 1 },
+        { reason: "user:name:.*Factory$", count: 1 }
+      ])
+    );
   });
 
   it("matches configured decorators with an optional leading at-sign", async () => {
     const projectRoot = await createTempDir("cognitive-exclusions-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
-      "package.json": "{\"name\":\"fixture\",\"private\":true}",
+      "package.json": '{"name":"fixture","private":true}',
       "src/sample.ts": `class Sample {
   @Generated
   decorated(${parameters(7)}) {
@@ -177,7 +181,7 @@ ${nestedIfBody(7, 2)}
     const projectRoot = await createTempDir("cognitive-exclusions-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
-      "package.json": "{\"name\":\"fixture\",\"private\":true}",
+      "package.json": '{"name":"fixture","private":true}',
       "src/sample.ts": `const decorators = {
   Generated() {
     return function (): void {};
@@ -210,7 +214,7 @@ ${nestedIfBody(7, 2)}
     const projectRoot = await createTempDir("cognitive-exclusions-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
-      "package.json": "{\"name\":\"fixture\",\"private\":true}",
+      "package.json": '{"name":"fixture","private":true}',
       "src/[literal].ts": buildDeepNestedIfFunction("literal", 7),
       "packages/web/src/skip.ts": buildDeepNestedIfFunction("skip", 7),
       "packages/ui/src/file1.ts": buildDeepNestedIfFunction("file1", 7),
@@ -225,11 +229,13 @@ ${nestedIfBody(7, 2)}
 
     expect(result.thresholdExceeded).toBe(false);
     expect(result.metrics.map((metric) => metric.displayName)).toEqual(["safe"]);
-    expect(result.exclusionAudit.excludedFileReasons).toEqual(expect.arrayContaining([
-      { reason: "user:path:src/[literal].ts", count: 1 },
-      { reason: "user:path:packages/*/src/skip.ts", count: 1 },
-      { reason: "user:path:packages/**/file?.ts", count: 1 }
-    ]));
+    expect(result.exclusionAudit.excludedFileReasons).toEqual(
+      expect.arrayContaining([
+        { reason: "user:path:src/[literal].ts", count: 1 },
+        { reason: "user:path:packages/*/src/skip.ts", count: 1 },
+        { reason: "user:path:packages/**/file?.ts", count: 1 }
+      ])
+    );
   });
 });
 

@@ -10,10 +10,13 @@ import {
 } from "@barney-media/cognitive-typescript-core";
 import type { ReporterReportOptions, ResolvedReporterReportOptions } from "@barney-media/cognitive-typescript-core";
 
-type VitestReporterEntry = string | [string, unknown] | {
-  onTestRunEnd?: () => Promise<void>;
-  onFinishedReportCoverage?: () => Promise<void>;
-};
+type VitestReporterEntry =
+  | string
+  | [string, unknown]
+  | {
+      onTestRunEnd?: () => Promise<void>;
+      onFinishedReportCoverage?: () => Promise<void>;
+    };
 
 type VitestConfig = Record<string, unknown> & {
   test?: Record<string, unknown> & {
@@ -21,6 +24,8 @@ type VitestConfig = Record<string, unknown> & {
   };
 };
 
+// Preserve the exported interface shape for downstream declaration merging.
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface CognitiveTypescriptVitestOptions extends ReporterReportOptions {}
 
 export class CognitiveTypescriptVitestReporter {
