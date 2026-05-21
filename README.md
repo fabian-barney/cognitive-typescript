@@ -20,6 +20,8 @@ It performs pure static analysis using the Sonar Cognitive Complexity white pape
 
 ## Build and Test
 
+CI validates the repository on Ubuntu and Windows with Node `22.12.0` and `24.0.0`. Ubuntu enforces the full build, test, gate, and packaging command set; Windows independently validates build/test behavior. Locally, run the full Ubuntu command set before opening or updating a pull request:
+
 ```bash
 npm ci
 npm run build
@@ -108,7 +110,7 @@ Verified and unverified syntax shapes are tracked in [docs/compatibility-matrix.
 
 ## Release
 
-The default release path uses npm Trusted Publishing from `.github/workflows/release.yml`. Tag `v<version>` from `main` after the build workflow is green. The tag-triggered release workflow verifies package versions, renders the GitHub release notes from `CHANGELOG.md`, publishes the four public npm packages, and creates the GitHub release.
+The default release path uses npm Trusted Publishing from `.github/workflows/release.yml`. Tag `v<version>` from `main` after the build workflow is green. The tag-triggered release workflow verifies package versions, renders the GitHub release notes from `CHANGELOG.md`, runs `npm test`, `npm run cognitive-typescript-check`, and `npm run crap-typescript-check`, then publishes the four public npm packages and creates the GitHub release.
 
 `v0.1.0` was the one-time bootstrap release that used the GitHub repo `NPM_TOKEN` secret together with provenance so the package names could be created on npm. Trusted Publishers are now the default for these packages:
 
@@ -123,6 +125,12 @@ Release notes can be rendered locally with:
 
 ```bash
 npm run render-release-notes -- v0.1.1
+```
+
+Before tagging a release, also verify the version metadata locally:
+
+```bash
+npm run verify-release-version -- v0.1.1
 ```
 
 ## Contributing
