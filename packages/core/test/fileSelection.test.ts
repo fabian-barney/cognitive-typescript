@@ -184,7 +184,9 @@ describe("file selection", () => {
         stderrComplete: true,
         timedOut: true
       })
-    )).rejects.toThrow("git status --porcelain timed out after 30000ms (stdout: partial stdout; stderr: partial stderr)");
+    )).rejects.toThrow(
+      "git status --porcelain=v1 -z --untracked-files=all timed out after 30000ms (stdout: partial stdout; stderr: partial stderr)"
+    );
   });
 
   it("rejects incomplete git status output on success", async () => {
@@ -198,7 +200,23 @@ describe("file selection", () => {
         stderrComplete: true,
         timedOut: false
       })
-    )).rejects.toThrow("could not fully capture git status --porcelain output; refusing incomplete changed-file detection");
+    )).rejects.toThrow(
+      "could not fully capture git status --porcelain=v1 -z --untracked-files=all output; refusing incomplete changed-file detection"
+    );
+  });
+
+  it("sanitizes NUL bytes in git status error context", async () => {
+    await expect(changedTypeScriptFilesUnderSourceRoots(
+      "C:/repo",
+      async () => ({
+        exitCode: 0,
+        stdout: "?? src/added.ts\0M  src/changed.ts\0",
+        stderr: "",
+        stdoutComplete: false,
+        stderrComplete: true,
+        timedOut: false
+      })
+    )).rejects.toThrow("stdout: ?? src/added.ts\\0M  src/changed.ts\\0");
   });
 
   it("surfaces git status failures from stderr or stdout", async () => {

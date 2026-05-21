@@ -8,6 +8,7 @@ const SOURCE_FILE_SUFFIXES = [".ts", ".tsx", ".mts", ".cts"];
 const DECLARATION_FILE_SUFFIXES = [".d.ts", ".d.mts", ".d.cts"];
 const GIT_STATUS_TIMEOUT_MS = 30_000;
 const MAX_CAPTURED_GIT_OUTPUT_BYTES = 64 * 1024;
+const GIT_STATUS_COMMAND_DESCRIPTION = "git status --porcelain=v1 -z --untracked-files=all";
 
 interface FileSelectionOptions {
   pruneDefaultExcludedDirectories?: boolean;
@@ -143,21 +144,23 @@ async function readChangedFileStatusEntries(
     }
   );
   if (result.timedOut) {
-    throw new Error(`git status --porcelain timed out after ${GIT_STATUS_TIMEOUT_MS}ms${formatCommandContext(result)}`);
+    throw new Error(`${GIT_STATUS_COMMAND_DESCRIPTION} timed out after ${GIT_STATUS_TIMEOUT_MS}ms${formatCommandContext(result)}`);
   }
   if (result.exitCode !== 0) {
     throw new Error(readChangedFileStatusError(result));
   }
   if (!result.stdoutComplete) {
-    throw new Error(`could not fully capture git status --porcelain output; refusing incomplete changed-file detection${formatCommandContext(result)}`);
+    throw new Error(
+      `could not fully capture ${GIT_STATUS_COMMAND_DESCRIPTION} output; refusing incomplete changed-file detection${formatCommandContext(result)}`
+    );
   }
   return result.stdout.split("\0");
 }
 
 function formatCommandContext(result: Awaited<ReturnType<CommandRunner>>): string {
   const details: string[] = [];
-  const stdout = result.stdout.trim();
-  const stderr = result.stderr.trim();
+  const stdout = sanitizeCommandOutput(result.stdout).trim();
+  const stderr = sanitizeCommandOutput(result.stderr).trim();
   if (stdout.length > 0) {
     details.push(`stdout: ${stdout}`);
   }
@@ -167,13 +170,17 @@ function formatCommandContext(result: Awaited<ReturnType<CommandRunner>>): strin
   return details.length === 0 ? "" : ` (${details.join("; ")})`;
 }
 
+function sanitizeCommandOutput(value: string): string {
+  return value.replaceAll("\0", "\\0");
+}
+
 function isIncludedTrackedStatus(status: string): boolean {
   return !status.includes("D") && /[AMRCU]/.test(status);
 }
 
 function readChangedFileStatusError(result: Awaited<ReturnType<CommandRunner>>): string {
   const message = result.stderr.trim() || result.stdout.trim();
-  return message || "git status --porcelain failed";
+  return message || `${GIT_STATUS_COMMAND_DESCRIPTION} failed`;
 }
 
 async function walkForSourceRoots(
