@@ -18,6 +18,8 @@ interface RunCommandResult {
   timedOut: boolean;
 }
 
+const FORCE_KILL_TIMEOUT_MS = 1_000;
+
 export function writeLine(writer: Writer | undefined, message: string): void {
   writer?.write(`${message}\n`);
 }
@@ -54,11 +56,28 @@ export async function runCommand(
     const stdout = createBoundedOutput(options.maxOutputBytes);
     const stderr = createBoundedOutput(options.maxOutputBytes);
     let timedOut = false;
-    const timeout = options.timeoutMs === undefined
+    let timeout: NodeJS.Timeout | undefined;
+    let forceKillTimeout: NodeJS.Timeout | undefined;
+
+    const clearTimers = () => {
+      if (timeout !== undefined) {
+        clearTimeout(timeout);
+      }
+      if (forceKillTimeout !== undefined) {
+        clearTimeout(forceKillTimeout);
+      }
+    };
+
+    timeout = options.timeoutMs === undefined
       ? undefined
       : setTimeout(() => {
         timedOut = true;
+        stdout.markIncomplete();
+        stderr.markIncomplete();
         child.kill();
+        forceKillTimeout = setTimeout(() => {
+          child.kill("SIGKILL");
+        }, FORCE_KILL_TIMEOUT_MS);
       }, options.timeoutMs);
 
     child.stdout.on("data", (chunk) => {
@@ -73,11 +92,14 @@ export async function runCommand(
     child.stderr.on("error", () => {
       stderr.markIncomplete();
     });
-    child.on("error", reject);
+    child.on("error", (error) => {
+      clearTimers();
+      stdout.markIncomplete();
+      stderr.markIncomplete();
+      reject(error);
+    });
     child.on("close", (exitCode) => {
-      if (timeout !== undefined) {
-        clearTimeout(timeout);
-      }
+      clearTimers();
       resolve({
         exitCode: exitCode ?? 1,
         stdout: stdout.text(),

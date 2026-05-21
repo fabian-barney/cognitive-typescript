@@ -13,6 +13,8 @@ describe("runCommand", () => {
 
     expect(result.timedOut).toBe(true);
     expect(result.stdout).toContain("partial");
+    expect(result.stdoutComplete).toBe(false);
+    expect(result.stderrComplete).toBe(false);
   });
 
   it("bounds captured output and marks incomplete streams", async () => {
@@ -38,6 +40,15 @@ describe("runCommand", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdoutComplete).toBe(true);
     expect(result.stdout).toBe("complete output");
+  });
+
+  it("rejects spawn failures without leaving timeout cleanup behind", async () => {
+    await expect(runCommand(
+      "__definitely_missing_command__",
+      [],
+      process.cwd(),
+      { timeoutMs: 300 }
+    )).rejects.toThrow();
   });
 
 });

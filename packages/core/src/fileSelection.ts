@@ -96,6 +96,10 @@ function collectChangedFilesFromStatus(projectRoot: string, entries: string[]): 
     if (!entry) {
       continue;
     }
+    const renameOrCopyDestination = isRenameOrCopyStatus(entry.status) ? entries[index + 1] : undefined;
+    if (renameOrCopyDestination) {
+      entry.pathValue = renameOrCopyDestination;
+    }
     collectChangedFile(projectRoot, entry, files);
     if (isRenameOrCopyStatus(entry.status)) {
       index += 1;

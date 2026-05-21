@@ -129,6 +129,25 @@ describe("file selection", () => {
     ]);
   });
 
+  it("prefers the destination path for renamed or copied src files", async () => {
+    const changed = await changedTypeScriptFilesUnderSourceRoots(
+      "C:/repo",
+      async () => ({
+        exitCode: 0,
+        stdout: "R  src/old-name.ts\0src/new-name.ts\0C  src/original.ts\0src/copied.ts\0",
+        stderr: "",
+        stdoutComplete: true,
+        stderrComplete: true,
+        timedOut: false
+      })
+    );
+
+    expect(changed.map((file) => path.relative("C:/repo", file).replace(/\\/g, "/"))).toEqual([
+      "src/copied.ts",
+      "src/new-name.ts"
+    ]);
+  });
+
   it("does not follow symlinked directories during discovery or explicit expansion", async () => {
     const projectRoot = await createTempDir("cognitive-files-");
     const linkedRoot = await createTempDir("cognitive-linked-");
