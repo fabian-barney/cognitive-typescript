@@ -10,7 +10,7 @@ import {
 } from "@barney-media/cognitive-typescript-core";
 import type { ReporterReportOptions, ResolvedReporterReportOptions } from "@barney-media/cognitive-typescript-core";
 
-export interface CognitiveTypescriptJestOptions extends ReporterReportOptions {}
+export type CognitiveTypescriptJestOptions = ReporterReportOptions;
 
 export default class CognitiveTypescriptJestReporter {
   private error: Error | undefined;

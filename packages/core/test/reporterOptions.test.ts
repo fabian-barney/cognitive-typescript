@@ -22,12 +22,14 @@ describe("resolveReporterReportOptions", () => {
   });
 
   it("resolves source exclusion options with the shared defaults", () => {
-    expect(resolveReporterReportOptions({
-      excludes: ["src/generated/**"],
-      excludeNames: [".*Factory$"],
-      excludeDecorators: ["Generated"],
-      excludeComments: ["@custom-generated"]
-    })).toMatchObject({
+    expect(
+      resolveReporterReportOptions({
+        excludes: ["src/generated/**"],
+        excludeNames: [".*Factory$"],
+        excludeDecorators: ["Generated"],
+        excludeComments: ["@custom-generated"]
+      })
+    ).toMatchObject({
       excludes: ["src/generated/**"],
       excludeNames: [".*Factory$"],
       excludeDecorators: ["Generated"],

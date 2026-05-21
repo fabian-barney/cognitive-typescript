@@ -9,10 +9,7 @@ export function validateThreshold(value: number): number {
   return value;
 }
 
-export const IGNORED_DIRECTORIES = new Set([
-  ".git",
-  "node_modules"
-]);
+export const IGNORED_DIRECTORIES = new Set([".git", "node_modules"]);
 
 export const DEFAULT_EXCLUDED_SOURCE_ROOT_DISCOVERY_DIRECTORIES = new Set([
   ".next",

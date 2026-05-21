@@ -1,6 +1,11 @@
 export { analyzeProject } from "./analyzeProject";
 export { runCli, parseCliArguments, usage } from "./cli";
-export { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots, isAnalyzableFile } from "./fileSelection";
+export {
+  changedTypeScriptFilesUnderSourceRoots,
+  expandExplicitPaths,
+  findAllTypeScriptFilesUnderSourceRoots,
+  isAnalyzableFile
+} from "./fileSelection";
 export { parseFileMethods } from "./parser";
 export { resolveSourceExclusionOptions, SourceExclusionAuditBuilder, SourceExclusionMatcher } from "./sourceExclusions";
 export {
@@ -16,11 +21,7 @@ export {
 export { deleteOwnedReportFile, publishAnalysisReports } from "./reportPublishing";
 export { DEFAULT_JUNIT_REPORT, resolveReporterReportOptions } from "./reporterOptions";
 export { validateReportPathTargets } from "./reportPaths";
-export {
-  COGNITIVE_COMPLEXITY_THRESHOLD,
-  NO_FILES_MESSAGE,
-  NO_ANALYZABLE_FUNCTIONS_MESSAGE
-} from "./constants";
+export { COGNITIVE_COMPLEXITY_THRESHOLD, NO_FILES_MESSAGE, NO_ANALYZABLE_FUNCTIONS_MESSAGE } from "./constants";
 export type {
   AnalysisResult,
   AnalysisCliArguments,

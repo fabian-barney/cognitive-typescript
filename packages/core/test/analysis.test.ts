@@ -34,7 +34,9 @@ export function second(flag: boolean): number {
     });
 
     const result = await analyzeProject({ projectRoot });
-    expect(Object.fromEntries(result.metrics.map((metric) => [metric.displayName, metric.cognitiveComplexity]))).toEqual({
+    expect(
+      Object.fromEntries(result.metrics.map((metric) => [metric.displayName, metric.cognitiveComplexity]))
+    ).toEqual({
       first: 2,
       second: 2
     });

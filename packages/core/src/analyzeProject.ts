@@ -2,7 +2,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { COGNITIVE_COMPLEXITY_THRESHOLD, validateThreshold } from "./constants";
-import { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots } from "./fileSelection";
+import {
+  changedTypeScriptFilesUnderSourceRoots,
+  expandExplicitPaths,
+  findAllTypeScriptFilesUnderSourceRoots
+} from "./fileSelection";
 import { leadingFileCommentText } from "./leadingCommentText";
 import { analyzeTypeScriptFiles } from "./parser";
 import { resolveSourceExclusionOptions, SourceExclusionAuditBuilder, SourceExclusionMatcher } from "./sourceExclusions";
@@ -44,24 +48,23 @@ export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promi
         return [];
       }
       audit.recordAnalyzedFunction();
-      return [{
-        functionName: method.functionName,
-        containerName: method.containerName,
-        displayName: method.displayName,
-        startLine: method.startLine,
-        endLine: method.endLine,
-        bodySpan: method.bodySpan,
-        cognitiveComplexity: method.cognitiveComplexity,
-        filePath: parsedFile.filePath,
-        relativePath,
-        location: `${relativePath}:${method.startLine}-${method.endLine}`
-      }];
+      return [
+        {
+          functionName: method.functionName,
+          containerName: method.containerName,
+          displayName: method.displayName,
+          startLine: method.startLine,
+          endLine: method.endLine,
+          bodySpan: method.bodySpan,
+          cognitiveComplexity: method.cognitiveComplexity,
+          filePath: parsedFile.filePath,
+          relativePath,
+          location: `${relativePath}:${method.startLine}-${method.endLine}`
+        }
+      ];
     });
   });
-  const maxCognitiveComplexity = metrics.reduce(
-    (max, metric) => Math.max(max, metric.cognitiveComplexity),
-    0
-  );
+  const maxCognitiveComplexity = metrics.reduce((max, metric) => Math.max(max, metric.cognitiveComplexity), 0);
 
   return {
     metrics,

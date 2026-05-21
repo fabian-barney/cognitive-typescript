@@ -13,24 +13,24 @@ interface ResolvedReportPathTarget {
   collisionPath: string;
 }
 
-export async function validateReportPathTargets(
-  projectRoot: string,
-  targets: ReportPathTarget[]
-): Promise<void> {
+export async function validateReportPathTargets(projectRoot: string, targets: ReportPathTarget[]): Promise<void> {
   const root = path.resolve(projectRoot);
-  const reportTargets = targets.filter((target): target is { label: string; path: string } => (
-    target.path !== undefined
-  ));
+  const reportTargets = targets.filter(
+    (target): target is { label: string; path: string } => target.path !== undefined
+  );
   const shouldCheckCaseCollisions = reportTargets.length > 1;
   const resolvedTargets = await Promise.all(
-    reportTargets.map((target) => (
-      resolveReportPathTarget(root, target, shouldCheckCaseCollisions)
-    ))
+    reportTargets.map((target) => resolveReportPathTarget(root, target, shouldCheckCaseCollisions))
   );
 
   for (let leftIndex = 0; leftIndex < resolvedTargets.length; leftIndex += 1) {
     for (let rightIndex = leftIndex + 1; rightIndex < resolvedTargets.length; rightIndex += 1) {
-      ensureDistinctReportPaths(resolvedTargets[leftIndex], resolvedTargets[rightIndex]);
+      const leftTarget = resolvedTargets[leftIndex];
+      const rightTarget = resolvedTargets[rightIndex];
+      if (leftTarget === undefined || rightTarget === undefined) {
+        continue;
+      }
+      ensureDistinctReportPaths(leftTarget, rightTarget);
     }
   }
 }

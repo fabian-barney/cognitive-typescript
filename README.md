@@ -25,6 +25,8 @@ CI validates the repository on Ubuntu and Windows with Node `22.12.0` and `24.0.
 ```bash
 npm ci
 npm run build
+npm run lint
+npm run format:check
 npm test
 npm run cognitive-typescript-check
 npm run crap-typescript-check
@@ -33,6 +35,8 @@ npm pack --workspaces
 
 `npm run cognitive-typescript-check` runs the repository through its own Cognitive Complexity gate for the published package sources under `packages/`.
 `npm run crap-typescript-check` runs the repository through a CRAP gate using the published Vitest adapter for the package sources under `packages/`.
+`npm run lint` enforces the repository ESLint baseline.
+`npm run format:check` verifies the Prettier-managed source and configuration surface, and `npm run format:write` updates it locally.
 
 ## Install
 

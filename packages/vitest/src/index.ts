@@ -10,10 +10,13 @@ import {
 } from "@barney-media/cognitive-typescript-core";
 import type { ReporterReportOptions, ResolvedReporterReportOptions } from "@barney-media/cognitive-typescript-core";
 
-type VitestReporterEntry = string | [string, unknown] | {
-  onTestRunEnd?: () => Promise<void>;
-  onFinishedReportCoverage?: () => Promise<void>;
-};
+type VitestReporterEntry =
+  | string
+  | [string, unknown]
+  | {
+      onTestRunEnd?: () => Promise<void>;
+      onFinishedReportCoverage?: () => Promise<void>;
+    };
 
 type VitestConfig = Record<string, unknown> & {
   test?: Record<string, unknown> & {
@@ -21,7 +24,7 @@ type VitestConfig = Record<string, unknown> & {
   };
 };
 
-export interface CognitiveTypescriptVitestOptions extends ReporterReportOptions {}
+export type CognitiveTypescriptVitestOptions = ReporterReportOptions;
 
 export class CognitiveTypescriptVitestReporter {
   private finalizePromise: Promise<void> | null = null;

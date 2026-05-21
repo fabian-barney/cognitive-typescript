@@ -26,17 +26,13 @@ describe("compatibility matrix", () => {
       const result = await analyzeProject({ projectRoot });
 
       expect(toMetricMap(result.metrics)).toEqual(
-        Object.fromEntries(
-          testCase.expectedMetrics.map((metric) => [metric.name, metric.cognitiveComplexity])
-        )
+        Object.fromEntries(testCase.expectedMetrics.map((metric) => [metric.name, metric.cognitiveComplexity]))
       );
       expect(result.selectedFiles.every((filePath) => path.basename(path.dirname(filePath)) === "src")).toBe(true);
     });
   }
 });
 
-function toMetricMap(
-  metrics: Awaited<ReturnType<typeof analyzeProject>>["metrics"]
-): Record<string, number> {
+function toMetricMap(metrics: Awaited<ReturnType<typeof analyzeProject>>["metrics"]): Record<string, number> {
   return Object.fromEntries(metrics.map((metric) => [metric.displayName, metric.cognitiveComplexity]));
 }

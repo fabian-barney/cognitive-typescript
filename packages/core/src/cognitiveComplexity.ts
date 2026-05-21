@@ -295,10 +295,11 @@ function fallbackCallTarget(
   sourceFile: ts.SourceFile,
   containerName: string | null
 ): Pick<CallTarget, "name" | "ownerName"> {
-  return resolveIdentifierCallTarget(expression)
-    ?? resolvePropertyAccessCallTarget(expression, sourceFile, containerName)
-    ?? resolveElementAccessCallTarget(expression, sourceFile, containerName)
-    ?? { name: null, ownerName: null };
+  return (
+    resolveIdentifierCallTarget(expression) ??
+    resolvePropertyAccessCallTarget(expression, sourceFile, containerName) ??
+    resolveElementAccessCallTarget(expression, sourceFile, containerName) ?? { name: null, ownerName: null }
+  );
 }
 
 function resolveIdentifierCallTarget(expression: ts.Expression): Pick<CallTarget, "name" | "ownerName"> | null {
@@ -365,9 +366,11 @@ function isIgnoredJsxLogicalChain(node: ts.BinaryExpression): boolean {
 }
 
 function isLogicalBinary(node: ts.Node): node is ts.BinaryExpression {
-  return ts.isBinaryExpression(node)
-    && (node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
-      || node.operatorToken.kind === ts.SyntaxKind.BarBarToken);
+  return (
+    ts.isBinaryExpression(node) &&
+    (node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
+      node.operatorToken.kind === ts.SyntaxKind.BarBarToken)
+  );
 }
 
 function hasJsxExpressionAncestor(node: ts.Node): boolean {
@@ -423,11 +426,13 @@ function unwrapParentheses<T extends ts.Node>(node: T): T {
 }
 
 export function isNestedFunctionLike(node: ts.Node): node is NamedFunctionLike {
-  return ts.isFunctionDeclaration(node)
-    || ts.isFunctionExpression(node)
-    || ts.isArrowFunction(node)
-    || ts.isMethodDeclaration(node)
-    || ts.isGetAccessorDeclaration(node)
-    || ts.isSetAccessorDeclaration(node)
-    || ts.isConstructorDeclaration(node);
+  return (
+    ts.isFunctionDeclaration(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isArrowFunction(node) ||
+    ts.isMethodDeclaration(node) ||
+    ts.isGetAccessorDeclaration(node) ||
+    ts.isSetAccessorDeclaration(node) ||
+    ts.isConstructorDeclaration(node)
+  );
 }

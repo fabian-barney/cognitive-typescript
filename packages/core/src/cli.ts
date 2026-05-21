@@ -58,6 +58,9 @@ export function parseCliArguments(args: string[]): CliArguments {
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
+    if (arg === undefined) {
+      break;
+    }
     if (!arg.startsWith("--")) {
       state.fileArgs.push(arg);
       continue;
@@ -119,35 +122,35 @@ const OPTION_HANDLERS: Record<string, OptionHandler> = {
     return index;
   },
   "--exclude": (state, args, index, value) => {
-    state.excludes.push(parseListOptionValue(
-      optionValue(args, index, value, "--exclude", "a glob"),
-      "--exclude",
-      "a glob"
-    ));
+    state.excludes.push(
+      parseListOptionValue(optionValue(args, index, value, "--exclude", "a glob"), "--exclude", "a glob")
+    );
     return value === undefined ? index + 1 : index;
   },
   "--exclude-name": (state, args, index, value) => {
-    state.excludeNames.push(parseListOptionValue(
-      optionValue(args, index, value, "--exclude-name", "a regex"),
-      "--exclude-name",
-      "a regex"
-    ));
+    state.excludeNames.push(
+      parseListOptionValue(optionValue(args, index, value, "--exclude-name", "a regex"), "--exclude-name", "a regex")
+    );
     return value === undefined ? index + 1 : index;
   },
   "--exclude-decorator": (state, args, index, value) => {
-    state.excludeDecorators.push(parseListOptionValue(
-      optionValue(args, index, value, "--exclude-decorator", "a decorator name"),
-      "--exclude-decorator",
-      "a decorator name"
-    ));
+    state.excludeDecorators.push(
+      parseListOptionValue(
+        optionValue(args, index, value, "--exclude-decorator", "a decorator name"),
+        "--exclude-decorator",
+        "a decorator name"
+      )
+    );
     return value === undefined ? index + 1 : index;
   },
   "--exclude-comment": (state, args, index, value) => {
-    state.excludeComments.push(parseListOptionValue(
-      optionValue(args, index, value, "--exclude-comment", "a comment marker"),
-      "--exclude-comment",
-      "a comment marker"
-    ));
+    state.excludeComments.push(
+      parseListOptionValue(
+        optionValue(args, index, value, "--exclude-comment", "a comment marker"),
+        "--exclude-comment",
+        "a comment marker"
+      )
+    );
     return value === undefined ? index + 1 : index;
   },
   "--format": (state, args, index, value) => {
@@ -213,17 +216,11 @@ function createParseState(): ParseState {
 }
 
 function consumeOption(state: ParseState, args: string[], index: number): number {
-  const [option, value] = splitAssignedOption(args[index]);
-  const booleanHandler = BOOLEAN_OPTION_HANDLERS[option];
-  if (booleanHandler) {
-    booleanHandler(state, value);
-    return index;
+  const currentArg = args[index];
+  if (currentArg === undefined) {
+    throw new Error("Unknown option: <missing>");
   }
-
-  const handler = OPTION_HANDLERS[option];
-  if (!handler) {
-    throw new Error(`Unknown option: ${args[index]}`);
-  }
+  const { handler, value } = resolveOptionInvocation(currentArg);
   return handler(state, args, index, value);
 }
 
@@ -312,7 +309,7 @@ function optionalPath<K extends "output" | "junitReport">(
   key: K,
   value: string | undefined
 ): Partial<Pick<AnalysisCliArguments, K>> {
-  return value === undefined ? {} : { [key]: value } as Pick<AnalysisCliArguments, K>;
+  return value === undefined ? {} : ({ [key]: value } as Pick<AnalysisCliArguments, K>);
 }
 
 function parseReportFormat(value: string | undefined): ReportFormat {
@@ -343,6 +340,26 @@ function splitAssignedOption(arg: string): [string, string | undefined] {
     return [arg, undefined];
   }
   return [arg.slice(0, equalsIndex), arg.slice(equalsIndex + 1)];
+}
+
+function resolveOptionInvocation(currentArg: string): { handler: OptionHandler; value: string | undefined } {
+  const [option, value] = splitAssignedOption(currentArg);
+  const booleanHandler = BOOLEAN_OPTION_HANDLERS[option];
+  if (booleanHandler) {
+    return {
+      handler: (state, _args, index, booleanValue) => {
+        booleanHandler(state, booleanValue);
+        return index;
+      },
+      value
+    };
+  }
+
+  const handler = OPTION_HANDLERS[option];
+  if (!handler) {
+    throw new Error(`Unknown option: ${currentArg}`);
+  }
+  return { handler, value };
 }
 
 function parseFailuresOnly(state: ParseState, value: string | undefined): void {
@@ -393,7 +410,7 @@ function optionValue(
     throw new Error(`${option} requires ${valueDescription}`);
   }
   const separatedValue = args[index + 1];
-  if (separatedValue.startsWith("--")) {
+  if (separatedValue === undefined || separatedValue.startsWith("--")) {
     throw new Error(`${option} requires ${valueDescription}`);
   }
   return separatedValue;
@@ -461,11 +478,7 @@ function parseCliInputs(args: string[], stderr: Writer): CliArguments | number {
   }
 }
 
-async function analyzeCliProject(
-  parsed: AnalysisCliArguments,
-  projectRoot: string,
-  stderr: Writer
-) {
+async function analyzeCliProject(parsed: AnalysisCliArguments, projectRoot: string, stderr: Writer) {
   try {
     return await analyzeProject({
       projectRoot: path.resolve(projectRoot),
@@ -532,16 +545,10 @@ async function writeCliReports(
   });
 }
 
-function writeCliThresholdStatus(
-  result: Awaited<ReturnType<typeof analyzeProject>>,
-  stderr: Writer
-): number {
+function writeCliThresholdStatus(result: Awaited<ReturnType<typeof analyzeProject>>, stderr: Writer): number {
   if (!result.thresholdExceeded) {
     return 0;
   }
-  writeLine(
-    stderr,
-    `Cognitive Complexity threshold exceeded: ${result.maxCognitiveComplexity} > ${result.threshold}`
-  );
+  writeLine(stderr, `Cognitive Complexity threshold exceeded: ${result.maxCognitiveComplexity} > ${result.threshold}`);
   return 2;
 }

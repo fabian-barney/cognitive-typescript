@@ -45,10 +45,7 @@ function resolveReporterPath(): string {
   try {
     return require.resolve("./reporter");
   } catch {
-    const candidates = [
-      path.join(__dirname, "reporter.js"),
-      path.join(__dirname, "reporter.ts")
-    ];
+    const candidates = [path.join(__dirname, "reporter.js"), path.join(__dirname, "reporter.ts")];
     const resolved = candidates.find((candidate) => existsSync(candidate));
     if (resolved) {
       return resolved;

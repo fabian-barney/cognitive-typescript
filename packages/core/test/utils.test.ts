@@ -56,12 +56,6 @@ describe("runCommand", () => {
   });
 
   it("rejects spawn failures without leaving timeout cleanup behind", async () => {
-    await expect(runCommand(
-      "__definitely_missing_command__",
-      [],
-      process.cwd(),
-      { timeoutMs: 300 }
-    )).rejects.toThrow();
+    await expect(runCommand("__definitely_missing_command__", [], process.cwd(), { timeoutMs: 300 })).rejects.toThrow();
   });
-
 });
