@@ -20,7 +20,7 @@ It performs pure static analysis using the Sonar Cognitive Complexity white pape
 
 ## Build and Test
 
-CI validates the repository on Ubuntu and Windows with Node `22.12.0` and `24.0.0`. Ubuntu enforces the full build, test, gate, and packaging command set; Windows independently validates build/test behavior. Locally, run the full Ubuntu command set before opening or updating a pull request:
+CI validates the repository on Ubuntu and Windows with Node `22.13.0` and `24.0.0`. Ubuntu enforces the full build, test, gate, and packaging command set; Windows independently validates build/test behavior. Locally, run the full Ubuntu command set before opening or updating a pull request:
 
 ```bash
 npm ci

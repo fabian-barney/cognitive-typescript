@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: ["22.12.0", "24.0.0"]
+        node-version: ["22.13.0", "24.0.0"]
 
     steps:
       - name: Checkout
@@ -63,17 +63,17 @@ jobs:
         run: npm test
 
   ubuntu-build-node-22:
-    name: Build and Test (Node 22.12.0, ubuntu-latest)
+    name: Build and Test (Node 22.13.0, ubuntu-latest)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Node 22.12.0
+      - name: Set up Node 22.13.0
         uses: actions/setup-node@v6
         with:
-          node-version: "22.12.0"
+          node-version: "22.13.0"
           cache: npm
 
       - name: Set up npm 11.14.1
@@ -120,7 +120,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: ["22.12.0", "24.0.0"]
+        node-version: ["22.13.0", "24.0.0"]
 
     steps:
       - name: Checkout
@@ -145,7 +145,7 @@ jobs:
         run: npm run cognitive-typescript-check
 
   crap-typescript-gate-node-22:
-    name: crap-typescript Gate (Node 22.12.0)
+    name: crap-typescript Gate (Node 22.13.0)
     runs-on: ubuntu-latest
     needs: [ubuntu-build-node-22]
 
@@ -153,10 +153,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Node 22.12.0
+      - name: Set up Node 22.13.0
         uses: actions/setup-node@v6
         with:
-          node-version: "22.12.0"
+          node-version: "22.13.0"
           cache: npm
 
       - name: Set up npm 11.14.1

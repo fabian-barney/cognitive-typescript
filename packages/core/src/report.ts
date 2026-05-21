@@ -196,13 +196,11 @@ function omitMethodStatuses(report: AnalysisReport): CompactAnalysisReport {
   return {
     status: report.status,
     threshold: report.threshold,
-    methods: report.methods.map((method) => ({
-      cc: method.cc,
-      method: method.method,
-      src: method.src,
-      lineStart: method.lineStart,
-      lineEnd: method.lineEnd
-    })),
+    methods: report.methods.map((method) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- omit status from compact report entries
+      const { status: _status, ...compactMethod } = method;
+      return compactMethod;
+    }),
     ...optionalExclusions(report.exclusions)
   };
 }
