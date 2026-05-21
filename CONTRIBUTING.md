@@ -13,7 +13,7 @@ All changes in this repository are expected to be issue-linked.
 
 ## Local validation
 
-Run the same command set the CI workflow enforces before pushing:
+Run the full Ubuntu validation command set before pushing. CI also runs Windows build/test coverage separately to catch path and platform issues:
 
 ```bash
 npm ci

@@ -19,10 +19,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Node 24
+      - name: Set up Node 24.0.0
         uses: actions/setup-node@v6
         with:
-          node-version: "24"
+          node-version: "24.0.0"
           cache: npm
 
       - name: Set up npm 11.14.1
@@ -37,19 +37,21 @@ jobs:
       - name: Render release notes
         run: node ./scripts/render-release-notes.mjs "${GITHUB_REF_NAME}" > release-notes.md
 
-      - name: Run build and tests
-        run: npm test
+      - name: Build packages
+        run: npm run build
+
+      - name: Run tests
+        run: node ./node_modules/vitest/vitest.mjs run
 
       - name: Run cognitive-typescript gate
         run: npm run cognitive-typescript-check
 
       - name: Run crap-typescript gate
-        run: npm run crap-typescript-check
+        run: node ./node_modules/vitest/vitest.mjs run --config vitest.crap.config.ts
 
       - name: Build publish artifacts
         run: |
           mkdir -p release-artifacts
-          npm run build
           npm pack --workspaces --pack-destination release-artifacts
           cp release-notes.md release-artifacts/release-notes.md
 
@@ -69,11 +71,14 @@ jobs:
       id-token: write
 
     steps:
-      - name: Set up Node 24
+      - name: Set up Node 24.0.0
         uses: actions/setup-node@v6
         with:
-          node-version: "24"
+          node-version: "24.0.0"
           registry-url: "https://registry.npmjs.org"
+
+      - name: Set up npm 11.14.1
+        run: npm install --global npm@11.14.1
 
       - name: Download publish artifacts
         uses: actions/download-artifact@v4
