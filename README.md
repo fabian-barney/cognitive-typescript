@@ -86,11 +86,15 @@ npx cognitive-typescript src/server.ts packages/web
 --changed                    Analyze changed TypeScript files under src/
 <file ...>                   Analyze explicit TypeScript files
 <directory ...>              Analyze TypeScript files under each directory's nested src/ tree
+--format <format>            Emit toon, json, text, junit, or none (default: toon)
 --exclude <glob>             Exclude normalized project-relative paths from analysis (repeatable)
 --exclude-name <regex>       Exclude matching function or method names from analysis (repeatable)
 --exclude-decorator <name>   Exclude matching decorators by simple or dotted source name (repeatable)
 --exclude-comment <marker>   Exclude generated code with leading file/function comment markers (repeatable)
 --use-default-exclusions     Enable conservative generated-code exclusions (default: true)
+--failures-only[=true|false] Emit failed functions only in the primary report
+--omit-redundancy[=true|false]
+                             Omit redundant per-method status in the primary report
 --output <path>              Write the primary report to a file instead of stdout
 --junit-report <path>        Also write a full JUnit XML report for CI test-report UIs
 --threshold <integer>        Override the Cognitive Complexity threshold (default: 15)
@@ -133,7 +137,7 @@ console.log(result.thresholdExceeded);
 console.log(primary);
 ```
 
-`analyzeProject(...)` accepts:
+Common `analyzeProject(...)` options include:
 
 - `projectRoot`
 - `explicitPaths`
@@ -144,6 +148,8 @@ console.log(primary);
 - `excludeComments`
 - `useDefaultExclusions`
 - `threshold`
+
+Primary-report formatting and filtering controls such as `format`, `failuresOnly`, and `omitRedundancy` belong to `formatAnalysisReport(...)` or the report-publishing layer, not to `analyzeProject(...)`.
 
 `AnalysisResult` returns:
 
