@@ -37,17 +37,14 @@ jobs:
       - name: Render release notes
         run: node ./scripts/render-release-notes.mjs "${GITHUB_REF_NAME}" > release-notes.md
 
-      - name: Build packages
-        run: npm run build
-
       - name: Run tests
-        run: node ./node_modules/vitest/vitest.mjs run
+        run: npm test
 
       - name: Run cognitive-typescript gate
         run: npm run cognitive-typescript-check
 
       - name: Run crap-typescript gate
-        run: node ./node_modules/vitest/vitest.mjs run --config vitest.crap.config.ts
+        run: npm run crap-typescript-check
 
       - name: Build publish artifacts
         run: |
