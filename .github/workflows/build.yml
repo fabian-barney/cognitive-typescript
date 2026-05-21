@@ -104,12 +104,19 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
+          cache: npm
 
       - name: Set up npm 11.14.1
         run: npm install --global npm@11.14.1
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build packages
+        run: npm run build
+
       - name: Run cognitive-typescript gate
-        run: node ./scripts/run-cognitive-typescript-gate.mjs packages
+        run: npm run cognitive-typescript-check
 
   crap-typescript-gate-node-22:
     name: crap-typescript Gate (Node 22.12.0)
