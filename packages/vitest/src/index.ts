@@ -24,7 +24,9 @@ type VitestConfig = Record<string, unknown> & {
   };
 };
 
-export type CognitiveTypescriptVitestOptions = ReporterReportOptions;
+// Preserve the exported interface shape for downstream declaration merging.
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface CognitiveTypescriptVitestOptions extends ReporterReportOptions {}
 
 export class CognitiveTypescriptVitestReporter {
   private finalizePromise: Promise<void> | null = null;

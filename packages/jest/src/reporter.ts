@@ -10,7 +10,9 @@ import {
 } from "@barney-media/cognitive-typescript-core";
 import type { ReporterReportOptions, ResolvedReporterReportOptions } from "@barney-media/cognitive-typescript-core";
 
-export type CognitiveTypescriptJestOptions = ReporterReportOptions;
+// Preserve the exported interface shape for downstream declaration merging.
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface CognitiveTypescriptJestOptions extends ReporterReportOptions {}
 
 export default class CognitiveTypescriptJestReporter {
   private error: Error | undefined;
