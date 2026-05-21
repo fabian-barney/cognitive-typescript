@@ -151,7 +151,7 @@ function createBoundedOutput(maxOutputBytes: number | undefined) {
       if (complete) {
         return text;
       }
-      const trimmed = text.trim();
+      const trimmed = text.trimEnd();
       return trimmed.length === 0 ? "[output truncated]" : `${trimmed} [output truncated]`;
     }
   };

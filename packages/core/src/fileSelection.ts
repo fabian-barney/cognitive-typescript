@@ -159,8 +159,8 @@ async function readChangedFileStatusEntries(
 
 function formatCommandContext(result: Awaited<ReturnType<CommandRunner>>): string {
   const details: string[] = [];
-  const stdout = sanitizeCommandOutput(result.stdout).trim();
-  const stderr = sanitizeCommandOutput(result.stderr).trim();
+  const stdout = sanitizeCommandOutput(result.stdout).trimEnd();
+  const stderr = sanitizeCommandOutput(result.stderr).trimEnd();
   if (stdout.length > 0) {
     details.push(`stdout: ${stdout}`);
   }

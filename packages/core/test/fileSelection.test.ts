@@ -130,8 +130,11 @@ describe("file selection", () => {
   });
 
   it("prefers the destination path for renamed or copied src files", async () => {
+    const projectRoot = await createTempDir("cognitive-files-");
+    tempDirs.push(projectRoot);
+
     const changed = await changedTypeScriptFilesUnderSourceRoots(
-      "C:/repo",
+      projectRoot,
       async () => ({
         exitCode: 0,
         stdout: "R  src/old-name.ts\0src/new-name.ts\0C  src/original.ts\0src/copied.ts\0",
@@ -142,7 +145,7 @@ describe("file selection", () => {
       })
     );
 
-    expect(changed.map((file) => path.relative("C:/repo", file).replace(/\\/g, "/"))).toEqual([
+    expect(changed.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual([
       "src/copied.ts",
       "src/new-name.ts"
     ]);
