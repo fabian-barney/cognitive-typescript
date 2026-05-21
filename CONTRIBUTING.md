@@ -11,3 +11,22 @@ All changes in this repository are expected to be issue-linked.
 5. Keep the pull request green, reply to review comments, and resolve threads only after the fix or an explicit invalidation response.
 6. Merge only after the latest review is newer than the latest push and all required checks are green.
 
+## Local validation
+
+Run the same command set the CI workflow enforces before pushing:
+
+```bash
+npm ci
+npm run build
+npm test
+npm run cognitive-typescript-check
+npm run crap-typescript-check
+npm pack --workspaces
+```
+
+Before tagging a release, also run:
+
+```bash
+npm run verify-release-version -- v0.1.1
+```
+
