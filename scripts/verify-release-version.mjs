@@ -21,4 +21,3 @@ for (const packageFile of packageFiles) {
     throw new Error(`${packageFile} has version ${parsed.version}, expected ${expectedVersion}`);
   }
 }
-

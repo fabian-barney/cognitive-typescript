@@ -17,27 +17,29 @@ describe("cli", () => {
   });
 
   it("parses report controls and inline valued options", () => {
-    expect(parseCliArguments([
-      "--changed",
-      "--format=json",
-      "--agent",
-      "--failures-only=false",
-      "--omit-redundancy=false",
-      "--exclude=packages/generated/**",
-      "--exclude",
-      "src/legacy/**",
-      "--exclude-name",
-      ".*Factory$",
-      "--exclude-decorator=@Generated",
-      "--exclude-comment",
-      "@manual-generated",
-      "--use-default-exclusions=false",
-      "--output",
-      "reports/primary.json",
-      "--junit-report=reports/junit.xml",
-      "--threshold",
-      "9"
-    ])).toEqual({
+    expect(
+      parseCliArguments([
+        "--changed",
+        "--format=json",
+        "--agent",
+        "--failures-only=false",
+        "--omit-redundancy=false",
+        "--exclude=packages/generated/**",
+        "--exclude",
+        "src/legacy/**",
+        "--exclude-name",
+        ".*Factory$",
+        "--exclude-decorator=@Generated",
+        "--exclude-comment",
+        "@manual-generated",
+        "--use-default-exclusions=false",
+        "--output",
+        "reports/primary.json",
+        "--junit-report=reports/junit.xml",
+        "--threshold",
+        "9"
+      ])
+    ).toEqual({
       mode: "changed",
       fileArgs: [],
       format: "json",
@@ -99,12 +101,13 @@ describe("cli", () => {
       failuresOnly: true,
       omitRedundancy: true
     });
-    expect(parseCliArguments(["--agent", "--format=text", "--failures-only=false", "--omit-redundancy=false"]))
-      .toMatchObject({
-        format: "text",
-        failuresOnly: false,
-        omitRedundancy: false
-      });
+    expect(
+      parseCliArguments(["--agent", "--format=text", "--failures-only=false", "--omit-redundancy=false"])
+    ).toMatchObject({
+      format: "text",
+      failuresOnly: false,
+      omitRedundancy: false
+    });
   });
 
   it("prints an empty passed report for empty projects", async () => {
@@ -120,15 +123,15 @@ describe("cli", () => {
 
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toBe(
-      "status: passed\n"
-      + "threshold: 15\n"
-      + "methods[0]:\n"
-      + "exclusions:\n"
-      + "  discoveredFiles: 0\n"
-      + "  analyzedFiles: 0\n"
-      + "  analyzedFunctions: 0\n"
-      + "  excludedFiles: 0\n"
-      + "  excludedFunctions: 0\n"
+      "status: passed\n" +
+        "threshold: 15\n" +
+        "methods[0]:\n" +
+        "exclusions:\n" +
+        "  discoveredFiles: 0\n" +
+        "  analyzedFiles: 0\n" +
+        "  analyzedFunctions: 0\n" +
+        "  excludedFiles: 0\n" +
+        "  excludedFunctions: 0\n"
     );
     expect(stderr.toString()).toBe("");
   });
@@ -206,13 +209,12 @@ export function safe(value: number): number {
 
     const stdout = new StringWriter();
     const stderr = new StringWriter();
-    const exitCode = await runCli([
-      "--format=json",
-      "--failures-only",
-      "--output=reports/primary.json",
-      "--junit-report",
-      "reports/junit.xml"
-    ], projectRoot, stdout, stderr);
+    const exitCode = await runCli(
+      ["--format=json", "--failures-only", "--output=reports/primary.json", "--junit-report", "reports/junit.xml"],
+      projectRoot,
+      stdout,
+      stderr
+    );
     const primary = JSON.parse(await readText(`${projectRoot}/reports/primary.json`)) as {
       methods: Array<{ method: string }>;
     };
@@ -238,10 +240,7 @@ export function safe(value: number): number {
 
     const stdout = new StringWriter();
     const stderr = new StringWriter();
-    const exitCode = await runCli([
-      "--format=none",
-      "--output=reports/empty.txt"
-    ], projectRoot, stdout, stderr);
+    const exitCode = await runCli(["--format=none", "--output=reports/empty.txt"], projectRoot, stdout, stderr);
 
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toBe("");
@@ -264,10 +263,14 @@ export function safe(value: number): number {
 
     const collisionStdout = new StringWriter();
     const collisionStderr = new StringWriter();
-    expect(await runCli([
-      "--output=reports/result.xml",
-      "--junit-report=reports/result.xml"
-    ], projectRoot, collisionStdout, collisionStderr)).toBe(1);
+    expect(
+      await runCli(
+        ["--output=reports/result.xml", "--junit-report=reports/result.xml"],
+        projectRoot,
+        collisionStdout,
+        collisionStderr
+      )
+    ).toBe(1);
     expect(collisionStderr.toString()).toContain("--output and --junit-report must target different report files");
   });
 });

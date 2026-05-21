@@ -20,11 +20,7 @@ export function collectMethodsFromSourceFile(sourceFile: ts.SourceFile, checker:
   return methods;
 }
 
-function buildInternalMethod(
-  node: ts.Node,
-  sourceFile: ts.SourceFile,
-  checker: ts.TypeChecker
-): InternalMethod | null {
+function buildInternalMethod(node: ts.Node, sourceFile: ts.SourceFile, checker: ts.TypeChecker): InternalMethod | null {
   for (const builder of METHOD_BUILDERS) {
     const candidate = builder(node, sourceFile, checker);
     if (candidate) {
@@ -34,11 +30,7 @@ function buildInternalMethod(
   return null;
 }
 
-type MethodBuilder = (
-  node: ts.Node,
-  sourceFile: ts.SourceFile,
-  checker: ts.TypeChecker
-) => InternalMethod | null;
+type MethodBuilder = (node: ts.Node, sourceFile: ts.SourceFile, checker: ts.TypeChecker) => InternalMethod | null;
 
 const METHOD_BUILDERS: MethodBuilder[] = [
   buildFunctionDeclarationMethod,
@@ -110,11 +102,7 @@ function buildMethodDeclarationMethod(
   });
 }
 
-function buildAccessorMethod(
-  node: ts.Node,
-  sourceFile: ts.SourceFile,
-  checker: ts.TypeChecker
-): InternalMethod | null {
+function buildAccessorMethod(node: ts.Node, sourceFile: ts.SourceFile, checker: ts.TypeChecker): InternalMethod | null {
   if (!(ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)) || !node.body) {
     return null;
   }
@@ -199,7 +187,11 @@ function createInternalMethod({
     fallbackOwnerName: fallbackOwnerName ?? containerName,
     exclusionNames: uniqueStrings(exclusionNames(containerName, functionName)),
     decoratorNames: collectDecoratorNames(functionNode),
-    leadingCommentText: leadingCommentText(sourceFile.text, functionNode.getFullStart(), functionNode.getStart(sourceFile)),
+    leadingCommentText: leadingCommentText(
+      sourceFile.text,
+      functionNode.getFullStart(),
+      functionNode.getStart(sourceFile)
+    ),
     calls: analysis.calls
   };
 }
@@ -281,9 +273,7 @@ function inferAnonymousDefaultName(node: ts.FunctionDeclaration): string | null 
   return node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword) ? "default" : null;
 }
 
-function findAssignedFunctionName(
-  node: ts.FunctionExpression | ts.ArrowFunction
-): {
+function findAssignedFunctionName(node: ts.FunctionExpression | ts.ArrowFunction): {
   name: string;
   containerName: string | null;
   symbolNodes: ts.Node[];
@@ -366,7 +356,9 @@ function assignedNameFromBinaryExpression(
   parent: ts.Node,
   node: ts.FunctionExpression | ts.ArrowFunction
 ): ReturnType<AssignedFunctionNameResolver> {
-  if (!(ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.EqualsToken && parent.right === node)) {
+  if (
+    !(ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.EqualsToken && parent.right === node)
+  ) {
     return null;
   }
   const target = assignmentTarget(parent.left);
@@ -467,10 +459,7 @@ function toDisplayName(containerName: string | null, functionName: string): stri
 }
 
 function exclusionNames(containerName: string | null, functionName: string): string[] {
-  return uniqueStrings([
-    functionName,
-    toDisplayName(containerName, functionName)
-  ]);
+  return uniqueStrings([functionName, toDisplayName(containerName, functionName)]);
 }
 
 function toSourceSpan(node: ts.Node, sourceFile: ts.SourceFile): SourceSpan {
@@ -549,9 +538,9 @@ function leadingCommentText(sourceText: string, fullStart: number, start: number
 type DeclarativeWrapper = (ts.FunctionExpression | ts.ArrowFunction) & { body: ts.Block };
 
 function isTopLevelDeclarativeWrapper(node: ts.Node): node is DeclarativeWrapper {
-  return (ts.isFunctionExpression(node) || ts.isArrowFunction(node))
-    && ts.isBlock(node.body)
-    && !hasEnclosingFunction(node);
+  return (
+    (ts.isFunctionExpression(node) || ts.isArrowFunction(node)) && ts.isBlock(node.body) && !hasEnclosingFunction(node)
+  );
 }
 
 function isDeclarativeTypeStatement(statement: ts.Statement): boolean {
@@ -559,16 +548,20 @@ function isDeclarativeTypeStatement(statement: ts.Statement): boolean {
 }
 
 function variableStatementContainsMethodLike(statement: ts.Statement): boolean {
-  return ts.isVariableStatement(statement)
-    && statement.declarationList.declarations.some((declaration) =>
+  return (
+    ts.isVariableStatement(statement) &&
+    statement.declarationList.declarations.some((declaration) =>
       declaration.initializer ? initializerContainsMethodLike(declaration.initializer) : false
-    );
+    )
+  );
 }
 
 function assignmentStatementContainsMethodLike(statement: ts.Statement): boolean {
-  return ts.isExpressionStatement(statement)
-    && isAssignmentBinaryExpression(statement.expression)
-    && initializerContainsMethodLike(statement.expression.right);
+  return (
+    ts.isExpressionStatement(statement) &&
+    isAssignmentBinaryExpression(statement.expression) &&
+    initializerContainsMethodLike(statement.expression.right)
+  );
 }
 
 function isDeclarativeInitializer(expression: ts.Expression): boolean {
@@ -590,7 +583,10 @@ function isAssignmentBinaryExpression(node: ts.Node): node is ts.BinaryExpressio
   return ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken;
 }
 
-function createAssignmentTarget(name: string, containerName: string | null): { name: string; containerName: string | null } {
+function createAssignmentTarget(
+  name: string,
+  containerName: string | null
+): { name: string; containerName: string | null } {
   return { name, containerName };
 }
 
@@ -606,10 +602,10 @@ function assignmentTargetFromIdentifier(node: ts.Expression): { name: string; co
   return ts.isIdentifier(node) ? createAssignmentTarget(node.text, null) : null;
 }
 
-function assignmentTargetFromPropertyAccess(node: ts.Expression): { name: string; containerName: string | null } | null {
-  return ts.isPropertyAccessExpression(node)
-    ? createAssignmentTarget(node.name.text, node.expression.getText())
-    : null;
+function assignmentTargetFromPropertyAccess(
+  node: ts.Expression
+): { name: string; containerName: string | null } | null {
+  return ts.isPropertyAccessExpression(node) ? createAssignmentTarget(node.name.text, node.expression.getText()) : null;
 }
 
 function assignmentTargetFromElementAccess(node: ts.Expression): { name: string; containerName: string | null } | null {

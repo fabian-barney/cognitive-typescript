@@ -56,7 +56,6 @@ export async function runCommand(
     const stdout = createBoundedOutput(options.maxOutputBytes);
     const stderr = createBoundedOutput(options.maxOutputBytes);
     let timedOut = false;
-    let timeout: NodeJS.Timeout | undefined;
     let forceKillTimeout: NodeJS.Timeout | undefined;
 
     const clearTimers = () => {
@@ -68,17 +67,18 @@ export async function runCommand(
       }
     };
 
-    timeout = options.timeoutMs === undefined
-      ? undefined
-      : setTimeout(() => {
-        timedOut = true;
-        stdout.markIncomplete();
-        stderr.markIncomplete();
-        child.kill();
-        forceKillTimeout = setTimeout(() => {
-          child.kill("SIGKILL");
-        }, FORCE_KILL_TIMEOUT_MS);
-      }, options.timeoutMs);
+    const timeout =
+      options.timeoutMs === undefined
+        ? undefined
+        : setTimeout(() => {
+            timedOut = true;
+            stdout.markIncomplete();
+            stderr.markIncomplete();
+            child.kill();
+            forceKillTimeout = setTimeout(() => {
+              child.kill("SIGKILL");
+            }, FORCE_KILL_TIMEOUT_MS);
+          }, options.timeoutMs);
 
     child.stdout.on("data", (chunk) => {
       stdout.write(chunk);
@@ -157,11 +157,7 @@ function createBoundedOutput(maxOutputBytes: number | undefined) {
   };
 }
 
-function captureLength(
-  bufferLength: number,
-  maxOutputBytes: number | undefined,
-  capturedBytes: number
-): number {
+function captureLength(bufferLength: number, maxOutputBytes: number | undefined, capturedBytes: number): number {
   if (maxOutputBytes === undefined) {
     return bufferLength;
   }

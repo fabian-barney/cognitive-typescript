@@ -98,10 +98,14 @@ describe("report formatting", () => {
   it("formats JSON, text, and TOON reports with the cognitive-only model", () => {
     const metrics = [metric({ displayName: "risky", cognitiveComplexity: 16 })];
 
-    expect(JSON.parse(formatAnalysisReport(metrics, {
-      format: "json",
-      exclusionAudit: audit()
-    }))).toEqual({
+    expect(
+      JSON.parse(
+        formatAnalysisReport(metrics, {
+          format: "json",
+          exclusionAudit: audit()
+        })
+      )
+    ).toEqual({
       status: "failed",
       threshold: 15,
       methods: [
@@ -125,14 +129,13 @@ describe("report formatting", () => {
   });
 
   it("filters failures and omits redundant method status for compact primary reports", () => {
-    const parsed = JSON.parse(formatAnalysisReport([
-      metric(),
-      metric({ displayName: "risky", cognitiveComplexity: 16 })
-    ], {
-      format: "json",
-      failuresOnly: true,
-      omitRedundancy: true
-    })) as { status: string; threshold: number; methods: Array<Record<string, unknown>> };
+    const parsed = JSON.parse(
+      formatAnalysisReport([metric(), metric({ displayName: "risky", cognitiveComplexity: 16 })], {
+        format: "json",
+        failuresOnly: true,
+        omitRedundancy: true
+      })
+    ) as { status: string; threshold: number; methods: Array<Record<string, unknown>> };
 
     expect(parsed.status).toBe("failed");
     expect(parsed.threshold).toBe(15);
@@ -146,19 +149,15 @@ describe("report formatting", () => {
   });
 
   it("uses agent as failures-only plus omit-redundancy defaults", () => {
-    const report = buildAgentAnalysisReport([
-      metric(),
-      metric({ displayName: "risky", cognitiveComplexity: 16 })
-    ], 15);
-    const parsed = JSON.parse(formatAnalysisReport([
-      metric(),
-      metric({ displayName: "risky", cognitiveComplexity: 16 })
-    ], {
-      format: "json",
-      agent: true,
-      exclusionAudit: audit(),
-      includeExclusionAudit: false
-    })) as typeof report;
+    const report = buildAgentAnalysisReport([metric(), metric({ displayName: "risky", cognitiveComplexity: 16 })], 15);
+    const parsed = JSON.parse(
+      formatAnalysisReport([metric(), metric({ displayName: "risky", cognitiveComplexity: 16 })], {
+        format: "json",
+        agent: true,
+        exclusionAudit: audit(),
+        includeExclusionAudit: false
+      })
+    ) as typeof report;
 
     expect(parsed).toEqual(report);
     expect(parsed.methods).toHaveLength(1);
@@ -167,9 +166,7 @@ describe("report formatting", () => {
   });
 
   it("can include exclusion audit in compact reports when explicitly requested", () => {
-    expect(buildAgentAnalysisReport([
-      metric({ displayName: "risky", cognitiveComplexity: 16 })
-    ], 15, audit())).toEqual({
+    expect(buildAgentAnalysisReport([metric({ displayName: "risky", cognitiveComplexity: 16 })], 15, audit())).toEqual({
       status: "failed",
       threshold: 15,
       methods: [
@@ -187,26 +184,37 @@ describe("report formatting", () => {
 
   it("does not add a blank separator before exclusions when there are no methods", () => {
     expect(formatTextReport(buildAnalysisReport([], 15, false, audit()))).toBe(
-      "status: passed\n"
-      + "threshold: 15\n"
-      + "methods[0]:\n"
-      + "exclusions:\n"
-      + "  discoveredFiles: 3\n"
-      + "  analyzedFiles: 2\n"
-      + "  analyzedFunctions: 2\n"
-      + "  excludedFiles: 1\n"
-      + "  excludedFunctions: 1\n"
-      + "  file.default:path:generated-directory: 1\n"
-      + "  function.user:name:.*Factory$: 1\n"
+      "status: passed\n" +
+        "threshold: 15\n" +
+        "methods[0]:\n" +
+        "exclusions:\n" +
+        "  discoveredFiles: 3\n" +
+        "  analyzedFiles: 2\n" +
+        "  analyzedFunctions: 2\n" +
+        "  excludedFiles: 1\n" +
+        "  excludedFunctions: 1\n" +
+        "  file.default:path:generated-directory: 1\n" +
+        "  function.user:name:.*Factory$: 1\n"
     );
   });
 
   it("formats JUnit XML with elapsed time and failure diagnostics", () => {
-    const output = formatJunitReport(buildAnalysisReport([
-      metric({ displayName: "risky \"quoted\" <value>", relativePath: "src/quoted&file.ts", cognitiveComplexity: 16 })
-    ], 15, false, audit()), false, 0.25);
+    const output = formatJunitReport(
+      buildAnalysisReport(
+        [
+          metric({ displayName: 'risky "quoted" <value>', relativePath: "src/quoted&file.ts", cognitiveComplexity: 16 })
+        ],
+        15,
+        false,
+        audit()
+      ),
+      false,
+      0.25
+    );
 
-    expect(output).toContain('<testsuites name="cognitive-typescript" tests="1" failures="1" skipped="0" errors="0" time="0.250000">');
+    expect(output).toContain(
+      '<testsuites name="cognitive-typescript" tests="1" failures="1" skipped="0" errors="0" time="0.250000">'
+    );
     expect(output).toContain('classname="src/quoted&amp;file.ts"');
     expect(output).toContain('name="risky &quot;quoted&quot; &lt;value&gt;:1"');
     expect(output).toContain('<property name="status" value="failed"/>');

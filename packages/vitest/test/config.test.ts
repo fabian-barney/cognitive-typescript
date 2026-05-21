@@ -10,10 +10,7 @@ describe("withCognitiveTypescriptVitest", () => {
       }
     });
 
-    expect(config.test?.reporters).toEqual([
-      "default",
-      expect.any(CognitiveTypescriptVitestReporter)
-    ]);
+    expect(config.test?.reporters).toEqual(["default", expect.any(CognitiveTypescriptVitestReporter)]);
   });
 
   it("preserves configured reporters and prepends the default reporter when missing", () => {
@@ -23,11 +20,7 @@ describe("withCognitiveTypescriptVitest", () => {
       }
     });
 
-    expect(config.test?.reporters).toEqual([
-      "default",
-      "summary",
-      expect.any(CognitiveTypescriptVitestReporter)
-    ]);
+    expect(config.test?.reporters).toEqual(["default", "summary", expect.any(CognitiveTypescriptVitestReporter)]);
   });
 
   it("forwards options without mutating coverage settings", () => {
