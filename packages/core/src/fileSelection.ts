@@ -1,14 +1,19 @@
-import { readdir, stat } from "node:fs/promises";
+import { lstat, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { DEFAULT_EXCLUDED_SOURCE_ROOT_DISCOVERY_DIRECTORIES, IGNORED_DIRECTORIES } from "./constants";
 import { runCommand, toRelativePath } from "./utils";
 
-const ANALYZABLE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"];
+const SOURCE_FILE_SUFFIXES = [".ts", ".tsx", ".mts", ".cts"];
+const DECLARATION_FILE_SUFFIXES = [".d.ts", ".d.mts", ".d.cts"];
+const GIT_STATUS_TIMEOUT_MS = 30_000;
+const MAX_CAPTURED_GIT_OUTPUT_BYTES = 64 * 1024;
 
 interface FileSelectionOptions {
   pruneDefaultExcludedDirectories?: boolean;
 }
+
+type CommandRunner = typeof runCommand;
 
 export async function findAllTypeScriptFilesUnderSourceRoots(
   projectRoot: string,
@@ -31,7 +36,10 @@ export async function expandExplicitPaths(
   const files = new Set<string>();
   for (const value of values) {
     const resolvedPath = path.resolve(projectRoot, value);
-    const fileStats = await stat(resolvedPath);
+    const fileStats = await lstat(resolvedPath);
+    if (fileStats.isSymbolicLink()) {
+      continue;
+    }
     if (fileStats.isDirectory()) {
       await expandDirectoryPath(resolvedPath, files, options);
       continue;
@@ -43,14 +51,17 @@ export async function expandExplicitPaths(
   return Array.from(files).sort();
 }
 
-export async function changedTypeScriptFilesUnderSourceRoots(projectRoot: string): Promise<string[]> {
-  const entries = await readChangedFileStatusEntries(projectRoot);
+export async function changedTypeScriptFilesUnderSourceRoots(
+  projectRoot: string,
+  commandRunner: CommandRunner = runCommand
+): Promise<string[]> {
+  const entries = await readChangedFileStatusEntries(projectRoot, commandRunner);
   return Array.from(collectChangedFilesFromStatus(projectRoot, entries)).sort();
 }
 
 export function isAnalyzableFile(filePath: string): boolean {
   const normalized = toRelativePath(path.parse(filePath).root, filePath).toLowerCase();
-  return hasAnySuffix(normalized, ANALYZABLE_EXTENSIONS);
+  return hasDeclarationFileSuffix(normalized) || hasAnySuffix(normalized, SOURCE_FILE_SUFFIXES);
 }
 
 interface GitStatusEntry {
@@ -106,24 +117,58 @@ function isRenameOrCopyStatus(status: string): boolean {
   return status.includes("R") || status.includes("C");
 }
 
-function hasAnySuffix(value: string, suffixes: string[]): boolean {
+function hasAnySuffix(value: string, suffixes: readonly string[]): boolean {
   return suffixes.some((suffix) => value.endsWith(suffix));
 }
 
-async function readChangedFileStatusEntries(projectRoot: string): Promise<string[]> {
-  const result = await runCommand("git", ["status", "--porcelain", "-z"], projectRoot);
-  if (result.exitCode === 0) {
-    return result.stdout.split("\0");
+function hasDeclarationFileSuffix(normalizedPath: string): boolean {
+  return hasAnySuffix(normalizedPath, DECLARATION_FILE_SUFFIXES);
+}
+
+async function readChangedFileStatusEntries(
+  projectRoot: string,
+  commandRunner: CommandRunner
+): Promise<string[]> {
+  const result = await commandRunner(
+    "git",
+    ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
+    projectRoot,
+    {
+      timeoutMs: GIT_STATUS_TIMEOUT_MS,
+      maxOutputBytes: MAX_CAPTURED_GIT_OUTPUT_BYTES
+    }
+  );
+  if (result.timedOut) {
+    throw new Error(`git status --porcelain timed out after ${GIT_STATUS_TIMEOUT_MS}ms${formatCommandContext(result)}`);
   }
-  throw new Error(readChangedFileStatusError(result.stderr));
+  if (result.exitCode !== 0) {
+    throw new Error(readChangedFileStatusError(result));
+  }
+  if (!result.stdoutComplete) {
+    throw new Error(`could not fully capture git status --porcelain output; refusing incomplete changed-file detection${formatCommandContext(result)}`);
+  }
+  return result.stdout.split("\0");
+}
+
+function formatCommandContext(result: Awaited<ReturnType<CommandRunner>>): string {
+  const details: string[] = [];
+  const stdout = result.stdout.trim();
+  const stderr = result.stderr.trim();
+  if (stdout.length > 0) {
+    details.push(`stdout: ${stdout}`);
+  }
+  if (stderr.length > 0) {
+    details.push(`stderr: ${stderr}`);
+  }
+  return details.length === 0 ? "" : ` (${details.join("; ")})`;
 }
 
 function isIncludedTrackedStatus(status: string): boolean {
   return !status.includes("D") && /[AMRCU]/.test(status);
 }
 
-function readChangedFileStatusError(stderr: string): string {
-  const message = stderr.trim();
+function readChangedFileStatusError(result: Awaited<ReturnType<CommandRunner>>): string {
+  const message = result.stderr.trim() || result.stdout.trim();
   return message || "git status --porcelain failed";
 }
 
@@ -148,10 +193,10 @@ async function walkForSourceRoots(
 }
 
 function classifySourceRootEntry(
-  entry: { isDirectory(): boolean; name: string },
+  entry: { isDirectory(): boolean; isSymbolicLink(): boolean; name: string },
   options: FileSelectionOptions
 ): "skip" | "source-root" | "descend" {
-  if (!entry.isDirectory()) {
+  if (!entry.isDirectory() || entry.isSymbolicLink()) {
     return "skip";
   }
   const lowerName = entry.name.toLowerCase();
@@ -167,6 +212,9 @@ async function walkSourceTree(
 ): Promise<void> {
   const entries = await readdir(currentDir, { withFileTypes: true });
   for (const entry of entries) {
+    if (entry.isSymbolicLink()) {
+      continue;
+    }
     const absolutePath = path.join(currentDir, entry.name);
     if (entry.isDirectory()) {
       await walkDirectoryEntry(entry.name, absolutePath, onFile);
@@ -183,7 +231,7 @@ async function walkDirectoryEntry(
   absolutePath: string,
   onFile: (filePath: string) => Promise<void>
 ): Promise<void> {
-  if (IGNORED_DIRECTORIES.has(entryName)) {
+  if (IGNORED_DIRECTORIES.has(entryName.toLowerCase())) {
     return;
   }
   await walkSourceTree(absolutePath, onFile);

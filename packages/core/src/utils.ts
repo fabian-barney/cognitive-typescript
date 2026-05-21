@@ -3,6 +3,21 @@ import { spawn } from "node:child_process";
 
 import type { Writer } from "./types";
 
+interface RunCommandOptions {
+  timeoutMs?: number;
+  maxOutputBytes?: number;
+  env?: NodeJS.ProcessEnv;
+}
+
+interface RunCommandResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  stdoutComplete: boolean;
+  stderrComplete: boolean;
+  timedOut: boolean;
+}
+
 export function writeLine(writer: Writer | undefined, message: string): void {
   writer?.write(`${message}\n`);
 }
@@ -27,28 +42,49 @@ export function toRelativePath(projectRoot: string, filePath: string): string {
 export async function runCommand(
   command: string,
   args: string[],
-  cwd: string
-): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  cwd: string,
+  options: RunCommandOptions = {}
+): Promise<RunCommandResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd,
+      env: options.env,
       stdio: ["ignore", "pipe", "pipe"]
     });
-    let stdout = "";
-    let stderr = "";
+    const stdout = createBoundedOutput(options.maxOutputBytes);
+    const stderr = createBoundedOutput(options.maxOutputBytes);
+    let timedOut = false;
+    const timeout = options.timeoutMs === undefined
+      ? undefined
+      : setTimeout(() => {
+        timedOut = true;
+        child.kill();
+      }, options.timeoutMs);
 
     child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      stdout.write(chunk);
     });
     child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+      stderr.write(chunk);
+    });
+    child.stdout.on("error", () => {
+      stdout.markIncomplete();
+    });
+    child.stderr.on("error", () => {
+      stderr.markIncomplete();
     });
     child.on("error", reject);
     child.on("close", (exitCode) => {
+      if (timeout !== undefined) {
+        clearTimeout(timeout);
+      }
       resolve({
         exitCode: exitCode ?? 1,
-        stdout,
-        stderr
+        stdout: stdout.text(),
+        stderr: stderr.text(),
+        stdoutComplete: stdout.isComplete(),
+        stderrComplete: stderr.isComplete(),
+        timedOut
       });
     });
   });
@@ -60,4 +96,56 @@ export function formatNumber(value: number): string {
 
 export function resolveScriptKind(filePath: string): "ts" | "tsx" {
   return filePath.toLowerCase().endsWith(".tsx") ? "tsx" : "ts";
+}
+
+function createBoundedOutput(maxOutputBytes: number | undefined) {
+  let text = "";
+  let capturedBytes = 0;
+  let complete = true;
+
+  return {
+    write(chunk: Buffer | string) {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      const bytesToCapture = captureLength(buffer.length, maxOutputBytes, capturedBytes);
+      if (bytesToCapture === 0) {
+        if (buffer.length > 0) {
+          complete = false;
+        }
+        return;
+      }
+      capturedBytes += bytesToCapture;
+      text += buffer.subarray(0, bytesToCapture).toString();
+      if (bytesToCapture < buffer.length) {
+        complete = false;
+      }
+    },
+    markIncomplete() {
+      complete = false;
+    },
+    isComplete() {
+      return complete;
+    },
+    text() {
+      if (complete) {
+        return text;
+      }
+      const trimmed = text.trim();
+      return trimmed.length === 0 ? "[output truncated]" : `${trimmed} [output truncated]`;
+    }
+  };
+}
+
+function captureLength(
+  bufferLength: number,
+  maxOutputBytes: number | undefined,
+  capturedBytes: number
+): number {
+  if (maxOutputBytes === undefined) {
+    return bufferLength;
+  }
+  const remaining = maxOutputBytes - capturedBytes;
+  if (remaining <= 0) {
+    return 0;
+  }
+  return Math.min(bufferLength, remaining);
 }

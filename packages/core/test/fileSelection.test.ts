@@ -1,8 +1,10 @@
+import { symlink } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  isAnalyzableFile,
   changedTypeScriptFilesUnderSourceRoots,
   expandExplicitPaths,
   findAllTypeScriptFilesUnderSourceRoots
@@ -63,6 +65,7 @@ describe("file selection", () => {
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
       "src/root.ts": "export const root = 1;\n",
+      "dist/src/root-generated.ts": "export const rootGenerated = 1;\n",
       "packages/web/src/page.ts": "export const page = 1;\n",
       "packages/web/dist/src/generated.ts": "export const generated = 1;\n",
       "packages/web/coverage/src/covered.ts": "export const covered = 1;\n",
@@ -76,6 +79,17 @@ describe("file selection", () => {
       "packages/web/src/page.ts",
       "src/root.ts"
     ]);
+  });
+
+  it("keeps declaration and implementation suffix handling explicit", () => {
+    expect(isAnalyzableFile("C:/repo/src/file.ts")).toBe(true);
+    expect(isAnalyzableFile("C:/repo/src/file.tsx")).toBe(true);
+    expect(isAnalyzableFile("C:/repo/src/file.mts")).toBe(true);
+    expect(isAnalyzableFile("C:/repo/src/file.cts")).toBe(true);
+    expect(isAnalyzableFile("C:/repo/src/file.d.ts")).toBe(true);
+    expect(isAnalyzableFile("C:/repo/src/file.d.mts")).toBe(true);
+    expect(isAnalyzableFile("C:/repo/src/file.d.cts")).toBe(true);
+    expect(isAnalyzableFile("C:/repo/src/file.js")).toBe(false);
   });
 
   it("does not prune build-output src roots when discovery pruning is disabled", async () => {
@@ -113,5 +127,72 @@ describe("file selection", () => {
     expect(changed.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual([
       "src/changed.ts"
     ]);
+  });
+
+  it("does not follow symlinked directories during discovery or explicit expansion", async () => {
+    const projectRoot = await createTempDir("cognitive-files-");
+    const linkedRoot = await createTempDir("cognitive-linked-");
+    tempDirs.push(projectRoot, linkedRoot);
+    await writeProjectFiles(projectRoot, {
+      "src/root.ts": "export const root = 1;\n"
+    });
+    await writeProjectFiles(linkedRoot, {
+      "src/linked.ts": "export const linked = 1;\n"
+    });
+    await symlink(
+      linkedRoot,
+      path.join(projectRoot, "linked"),
+      process.platform === "win32" ? "junction" : "dir"
+    );
+
+    const discovered = await findAllTypeScriptFilesUnderSourceRoots(projectRoot);
+    expect(discovered.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual([
+      "src/root.ts"
+    ]);
+
+    const expanded = await expandExplicitPaths(projectRoot, ["linked"]);
+    expect(expanded).toEqual([]);
+  });
+
+  it("reports git status timeouts with captured context", async () => {
+    await expect(changedTypeScriptFilesUnderSourceRoots(
+      "C:/repo",
+      async () => ({
+        exitCode: 1,
+        stdout: "partial stdout",
+        stderr: "partial stderr",
+        stdoutComplete: true,
+        stderrComplete: true,
+        timedOut: true
+      })
+    )).rejects.toThrow("git status --porcelain timed out after 30000ms (stdout: partial stdout; stderr: partial stderr)");
+  });
+
+  it("rejects incomplete git status output on success", async () => {
+    await expect(changedTypeScriptFilesUnderSourceRoots(
+      "C:/repo",
+      async () => ({
+        exitCode: 0,
+        stdout: "?? src/generated.ts [output truncated]",
+        stderr: "",
+        stdoutComplete: false,
+        stderrComplete: true,
+        timedOut: false
+      })
+    )).rejects.toThrow("could not fully capture git status --porcelain output; refusing incomplete changed-file detection");
+  });
+
+  it("surfaces git status failures from stderr or stdout", async () => {
+    await expect(changedTypeScriptFilesUnderSourceRoots(
+      "C:/repo",
+      async () => ({
+        exitCode: 1,
+        stdout: "stdout fallback",
+        stderr: "",
+        stdoutComplete: true,
+        stderrComplete: true,
+        timedOut: false
+      })
+    )).rejects.toThrow("stdout fallback");
   });
 });
