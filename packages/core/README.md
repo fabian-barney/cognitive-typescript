@@ -14,13 +14,24 @@ npm install --save-dev @barney-media/cognitive-typescript-core
 import {
   analyzeProject,
   COGNITIVE_COMPLEXITY_THRESHOLD,
-  formatReport,
+  formatAnalysisReport,
   parseFileMethods
 } from "@barney-media/cognitive-typescript-core";
 
-const result = await analyzeProject({ projectRoot: "." });
+const result = await analyzeProject({
+  projectRoot: ".",
+  changedOnly: true,
+  excludes: ["packages/generated/**"],
+  threshold: 12
+});
 
-console.log(formatReport(result.metrics));
+console.log(
+  formatAnalysisReport(result.metrics, {
+    format: "json",
+    threshold: result.threshold,
+    exclusionAudit: result.exclusionAudit
+  })
+);
 console.log(result.maxCognitiveComplexity);
 console.log(COGNITIVE_COMPLEXITY_THRESHOLD);
 console.log(result.exclusionAudit);
@@ -31,20 +42,25 @@ Key exports:
 - `analyzeProject`
 - `runCli`, `parseCliArguments`, `usage`
 - `parseFileMethods`
-- `formatReport`, `sortMetrics`
+- `formatAnalysisReport`, `formatReport`, `formatToonReport`, `formatTextReport`, `formatJunitReport`, `sortMetrics`
 - `COGNITIVE_COMPLEXITY_THRESHOLD`
 
 The core returns structured metrics suitable for CI quality gates and later automation or agent integrations.
 
-`analyzeProject(...)` supports aligned source-exclusion controls:
+`analyzeProject(...)` supports aligned file-selection and source-exclusion controls:
 
+- `explicitPaths`
+- `changedOnly`
 - `excludes`
 - `excludeNames`
 - `excludeDecorators`
 - `excludeComments`
 - `useDefaultExclusions`
+- `threshold`
 
 `AnalysisResult.exclusionAudit` reports discovered, analyzed, and excluded file/function counts plus per-reason tallies. Full reports and JUnit sidecars can publish that audit data directly, while compact agent primary output omits it by default.
+
+The core stays in the static-analysis lane: it does not execute tests, enable coverage, consume Istanbul or LCOV reports, or compute CRAP scores.
 
 See the [main repository](https://github.com/fabian-barney/cognitive-typescript) for full documentation.
 

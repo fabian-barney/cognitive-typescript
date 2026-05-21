@@ -26,9 +26,18 @@ npm run crap-typescript-check
 npm pack --workspaces
 ```
 
+CI expectations for pull requests:
+
+- Ubuntu runs the full build, test, lint, format, and gate command set.
+- Windows independently validates the build and test path behavior.
+- `npm run cognitive-typescript-check` is the repository self-gate for the published package sources.
+- `npm run crap-typescript-check` is the sibling CRAP gate for the same published package sources.
+
 Before tagging a release, also run:
 
 ```bash
 npm run verify-release-version -- v0.1.1
 ```
+
+The release workflow also renders the GitHub release notes from `CHANGELOG.md`, so unreleased notes need to be kept current before tagging.
 
