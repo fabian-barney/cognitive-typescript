@@ -23,11 +23,11 @@
   "scripts": {
     "build": "tsc -b packages/core packages/cli packages/vitest packages/jest",
     "cognitive-typescript-check": "node ./scripts/run-cognitive-typescript-gate.mjs packages",
-    "crap-typescript-check": "npm run build && vitest run --config vitest.crap.config.ts",
+    "crap-typescript-check": "vitest run --config vitest.crap.config.ts",
     "lint": "eslint . --max-warnings=0",
     "format:check": "prettier --check \"package*.json\" \"tsconfig*.json\" \"*.mjs\" \"*.ts\" \"packages/**/package.json\" \"packages/**/*.ts\" \"scripts/**/*.mjs\"",
     "format:write": "prettier --write \"package*.json\" \"tsconfig*.json\" \"*.mjs\" \"*.ts\" \"packages/**/package.json\" \"packages/**/*.ts\" \"scripts/**/*.mjs\"",
-    "test": "npm run build && vitest run",
+    "test": "vitest run --coverage.enabled true",
     "pack": "npm pack --workspaces",
     "render-release-notes": "node ./scripts/render-release-notes.mjs",
     "verify-release-version": "node ./scripts/verify-release-version.mjs"
