@@ -9,91 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  lint-and-format:
-    name: Lint and Format (Node ${{ matrix.node-version }}, ubuntu-latest)
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: ["22.13.0", "24.0.0"]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Node ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: npm
-
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run lint
-        run: npm run lint
-
-      - name: Run format check
-        run: npm run format:check
-
-  windows-build:
-    name: Build and Test (Node ${{ matrix.node-version }}, windows-latest)
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: ["22.13.0", "24.0.0"]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Node ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: npm
-
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm test
-
-  ubuntu-build-node-22:
-    name: Build and Test (Node 22.13.0, ubuntu-latest)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Node 22.13.0
-        uses: actions/setup-node@v6
-        with:
-          node-version: "22.13.0"
-          cache: npm
-
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm test
-
-      - name: Verify workspace packages
-        run: npm pack --workspaces
-
-  ubuntu-build-node-24:
-    name: Build and Test (Node 24.0.0, ubuntu-latest)
+  build:
+    name: build
     runs-on: ubuntu-latest
 
     steps:
@@ -112,28 +29,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test
+      - name: Build
+        run: npm run build
 
-      - name: Verify workspace packages
-        run: npm pack --workspaces
-
-  cognitive-typescript-gate:
-    name: cognitive-typescript Gate (Node ${{ matrix.node-version }})
+  test-unit:
+    name: test / unit
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: ["22.13.0", "24.0.0"]
+    needs:
+      - build
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Node ${{ matrix.node-version }}
+      - name: Set up Node 24.0.0
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: "24.0.0"
           cache: npm
 
       - name: Set up npm 11.14.1
@@ -142,57 +54,109 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build packages
+      - name: Build
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+          if-no-files-found: error
+
+  package:
+    name: package
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - test-unit
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node 24.0.0
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.0.0"
+          cache: npm
+
+      - name: Set up npm 11.14.1
+        run: npm install --global npm@11.14.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify workspace packages
+        run: npm pack --workspaces
+
+  quality-crap-cognitive-typescript:
+    name: verify / quality-crap-cognitive-typescript
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - test-unit
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node 24.0.0
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.0.0"
+          cache: npm
+
+      - name: Set up npm 11.14.1
+        run: npm install --global npm@11.14.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Download coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+
+      - name: Run crap-typescript gate
+        run: npm run crap-typescript-check
+
+  quality-cognitive-cognitive-typescript:
+    name: verify / quality-cognitive-cognitive-typescript
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - test-unit
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node 24.0.0
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.0.0"
+          cache: npm
+
+      - name: Set up npm 11.14.1
+        run: npm install --global npm@11.14.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
         run: npm run build
 
       - name: Run cognitive-typescript gate
         run: npm run cognitive-typescript-check
-
-  crap-typescript-gate-node-22:
-    name: crap-typescript Gate (Node 22.13.0)
-    runs-on: ubuntu-latest
-    needs: [ubuntu-build-node-22]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Node 22.13.0
-        uses: actions/setup-node@v6
-        with:
-          node-version: "22.13.0"
-          cache: npm
-
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run crap-typescript gate
-        run: npm run crap-typescript-check
-
-  crap-typescript-gate-node-24:
-    name: crap-typescript Gate (Node 24.0.0)
-    runs-on: ubuntu-latest
-    needs: [ubuntu-build-node-24]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Node 24.0.0
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24.0.0"
-          cache: npm
-
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run crap-typescript gate
-        run: npm run crap-typescript-check
 
