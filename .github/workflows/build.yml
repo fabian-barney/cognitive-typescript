@@ -32,13 +32,6 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Upload dependencies
-        uses: actions/upload-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
-          if-no-files-found: error
-
       - name: Upload build outputs
         uses: actions/upload-artifact@v4
         with:
@@ -67,11 +60,8 @@ jobs:
       - name: Set up npm 11.6.2
         run: npm install --global npm@11.6.2
 
-      - name: Download dependencies
-        uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
+      - name: Install dependencies
+        run: npm ci
 
       - name: Download build outputs
         uses: actions/download-artifact@v4
@@ -109,11 +99,8 @@ jobs:
       - name: Set up npm 11.6.2
         run: npm install --global npm@11.6.2
 
-      - name: Download dependencies
-        uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
+      - name: Install dependencies
+        run: npm ci
 
       - name: Download build outputs
         uses: actions/download-artifact@v4
@@ -144,11 +131,8 @@ jobs:
       - name: Set up npm 11.6.2
         run: npm install --global npm@11.6.2
 
-      - name: Download dependencies
-        uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
+      - name: Install dependencies
+        run: npm ci
 
       - name: Download build outputs
         uses: actions/download-artifact@v4
@@ -185,11 +169,8 @@ jobs:
       - name: Set up npm 11.6.2
         run: npm install --global npm@11.6.2
 
-      - name: Download dependencies
-        uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
+      - name: Install dependencies
+        run: npm ci
 
       - name: Download build outputs
         uses: actions/download-artifact@v4
