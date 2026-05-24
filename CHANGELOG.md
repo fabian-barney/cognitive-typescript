@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+- No unreleased changes.
+
+## [0.2.0] - 2026-05-24
+
 ### Added
 
 - Added aligned CLI, core API, Jest, and Vitest report controls for primary reports, JUnit sidecars, compact agent output, and configurable thresholds.
