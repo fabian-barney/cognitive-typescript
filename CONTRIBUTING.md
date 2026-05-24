@@ -36,7 +36,7 @@ CI expectations for pull requests:
 Before tagging a release, also run:
 
 ```bash
-npm run verify-release-version -- v0.1.1
+npm run verify-release-version -- v0.2.0
 ```
 
 The release workflow also renders the GitHub release notes from `CHANGELOG.md`, so unreleased notes need to be kept current before tagging.
