@@ -87,7 +87,7 @@ jobs:
         run: npm install --global npm@11.15.0
 
       - name: Download publish artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v7
         with:
           name: release-artifacts
           path: release-artifacts
