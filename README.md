@@ -309,13 +309,13 @@ The earlier `v0.1.0` bootstrap used a one-time `NPM_TOKEN` secret so the public 
 Release notes can be rendered locally with:
 
 ```bash
-npm run render-release-notes -- v0.2.0
+npm run render-release-notes -- v0.2.1
 ```
 
 Before tagging a release, also verify the version metadata locally:
 
 ```bash
-npm run verify-release-version -- v0.2.0
+npm run verify-release-version -- v0.2.1
 ```
 
 ## Contributing
