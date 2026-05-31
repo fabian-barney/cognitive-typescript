@@ -8,6 +8,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - No unreleased changes.
 
+## [0.2.1] - 2026-06-01
+
+### Changed
+
+- Updated compatible npm tooling and CI artifact action versions.
+- Hardened function discovery naming for namespace, class, object, class-field, computed-name, and assignment-target edge cases.
+- Documented and fixture-pinned Cognitive Complexity operator semantics while preserving existing default scores.
+
 ## [0.2.0] - 2026-05-24
 
 ### Added
