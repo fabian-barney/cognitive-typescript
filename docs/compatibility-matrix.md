@@ -15,6 +15,7 @@ This matrix records the TypeScript syntax and Cognitive Complexity behaviors cur
 | Expression-bodied arrows and declaration-only bodies | `tests/fixtures/compatibility-matrix/expression-and-declarations` | Verifies expression bodies score correctly and declaration-only bodies stay at `0`. |
 | Class and object methods | `tests/fixtures/compatibility-matrix/object-and-class-methods` | Verifies both container forms are discovered and named consistently. |
 | Property-assigned functions | `tests/fixtures/compatibility-matrix/property-assigned-functions` | Verifies class-field arrows, property access assignments, and element access assignments. |
+| Function discovery hardening | `tests/fixtures/compatibility-matrix/function-discovery-hardening` | Verifies namespace/class/object owner chains, class-field object owners, and static element-access assignment names. |
 | Ambient and namespace-only declaration containers | `tests/fixtures/compatibility-matrix/ambient-and-namespace-only` | Verifies declaration-only containers are ignored without inventing functions. |
 | Nested functions | `tests/fixtures/compatibility-matrix/nested-functions` | Verifies nested functions are scored independently and do not contribute to their enclosing function. |
 | Faux-class wrappers | `tests/fixtures/compatibility-matrix/faux-class-wrapper` | Verifies top-level declarative wrappers do not suppress legitimate exported property-assigned functions. |

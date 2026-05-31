@@ -1,9 +1,10 @@
 import ts from "typescript";
 
-import type { CallTarget, LogicalOperator, NamedFunctionLike } from "./analysisModel";
+import type { BodyBearingNamedFunctionLike, CallTarget, LogicalOperator, NamedFunctionLike } from "./analysisModel";
+import { staticElementAccessName, staticExpressionName } from "./staticNames";
 
 export function analyzeFunctionBody(
-  root: NamedFunctionLike,
+  root: BodyBearingNamedFunctionLike,
   sourceFile: ts.SourceFile,
   checker: ts.TypeChecker,
   containerName: string | null
@@ -53,7 +54,7 @@ export function analyzeFunctionBody(
   const recordCall = (expression: ts.Expression, arity: number): void => {
     calls.push({
       symbol: resolveCallSymbol(expression, checker),
-      ...fallbackCallTarget(expression, sourceFile, containerName),
+      ...fallbackCallTarget(expression, containerName),
       arity
     });
   };
@@ -292,13 +293,12 @@ function resolveSymbol(node: ts.Node, checker: ts.TypeChecker): ts.Symbol | null
 
 function fallbackCallTarget(
   expression: ts.Expression,
-  sourceFile: ts.SourceFile,
   containerName: string | null
 ): Pick<CallTarget, "name" | "ownerName"> {
   return (
     resolveIdentifierCallTarget(expression) ??
-    resolvePropertyAccessCallTarget(expression, sourceFile, containerName) ??
-    resolveElementAccessCallTarget(expression, sourceFile, containerName) ?? { name: null, ownerName: null }
+    resolvePropertyAccessCallTarget(expression, containerName) ??
+    resolveElementAccessCallTarget(expression, containerName) ?? { name: null, ownerName: null }
   );
 }
 
@@ -313,35 +313,33 @@ function resolveIdentifierCallTarget(expression: ts.Expression): Pick<CallTarget
 
 function resolvePropertyAccessCallTarget(
   expression: ts.Expression,
-  sourceFile: ts.SourceFile,
   containerName: string | null
 ): Pick<CallTarget, "name" | "ownerName"> | null {
   return ts.isPropertyAccessExpression(expression)
     ? {
         name: expression.name.text,
-        ownerName: ownerText(expression.expression, sourceFile, containerName)
+        ownerName: ownerText(expression.expression, containerName)
       }
     : null;
 }
 
 function resolveElementAccessCallTarget(
   expression: ts.Expression,
-  sourceFile: ts.SourceFile,
   containerName: string | null
 ): Pick<CallTarget, "name" | "ownerName"> | null {
-  return ts.isElementAccessExpression(expression) && expression.argumentExpression
+  const name = ts.isElementAccessExpression(expression)
+    ? staticElementAccessName(expression.argumentExpression)
+    : null;
+  return ts.isElementAccessExpression(expression) && name
     ? {
-        name: `[${expression.argumentExpression.getText(sourceFile)}]`,
-        ownerName: ownerText(expression.expression, sourceFile, containerName)
+        name,
+        ownerName: ownerText(expression.expression, containerName)
       }
     : null;
 }
 
-function ownerText(expression: ts.Expression, sourceFile: ts.SourceFile, containerName: string | null): string | null {
-  if (expression.kind === ts.SyntaxKind.ThisKeyword || expression.kind === ts.SyntaxKind.SuperKeyword) {
-    return containerName;
-  }
-  return expression.getText(sourceFile);
+function ownerText(expression: ts.Expression, containerName: string | null): string | null {
+  return staticExpressionName(expression, containerName);
 }
 
 function logicalOperator(kind: ts.SyntaxKind): "&&" | "||" | "??" | null {

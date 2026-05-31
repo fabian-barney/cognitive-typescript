@@ -137,6 +137,168 @@ export const registry = {
     });
   });
 
+  it("keeps bodyless declarations out of concrete method discovery", async () => {
+    const projectRoot = await createTempDir("cognitive-parser-");
+    tempDirs.push(projectRoot);
+    const filePath = path.join(projectRoot, "sample.ts");
+    await writeProjectFiles(projectRoot, {
+      "sample.ts": `declare function ambient(value: string): string;
+
+export function overload(value: string): string;
+export function overload(value: number): number;
+export function overload(value: string | number): string | number {
+  if (typeof value === "string") {
+    return value;
+  }
+  return value;
+}
+
+interface Shape {
+  render(): void;
+}
+
+type Handler = {
+  run(): void;
+};
+
+abstract class Base {
+  abstract render(): void;
+
+  concrete(flag: boolean): number {
+    if (flag) {
+      return 1;
+    }
+    return 0;
+  }
+}
+`
+    });
+
+    const methods = await parseFileMethods(filePath);
+    expect(toComplexityMap(methods)).toEqual({
+      overload: 1,
+      "Base.concrete": 1
+    });
+  });
+
+  it("uses owner chains and avoids source-text names for dynamic element assignments", async () => {
+    const projectRoot = await createTempDir("cognitive-parser-");
+    tempDirs.push(projectRoot);
+    const filePath = path.join(projectRoot, "sample.ts");
+    await writeProjectFiles(projectRoot, {
+      "sample.ts": `namespace Outer {
+  export class Example {
+    field = {
+      nested: (flag: boolean): number => flag ? 1 : 0
+    };
+
+    static factory = {
+      build(flag: boolean): number {
+        if (flag) {
+          return 1;
+        }
+        return 0;
+      }
+    };
+  }
+
+  export const obj = {
+    outer: {
+      inner: function (flag: boolean): number {
+        if (flag) {
+          return 1;
+        }
+        return 0;
+      }
+    }
+  };
+}
+
+class Foo {}
+Foo.prototype.bar = function (flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+};
+Foo["literal"] = function (flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+};
+const dynamicKey = "dynamic";
+Foo[dynamicKey] = function (flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+};
+`
+    });
+
+    const methods = await parseFileMethods(filePath);
+    const complexityByName = toComplexityMap(methods);
+    expect(complexityByName).toMatchObject({
+      "Outer.Example.field.nested": 1,
+      "Outer.Example.factory.build": 1,
+      "Outer.obj.outer.inner": 1,
+      "Foo.prototype.bar": 1,
+      'Foo["literal"]': 1
+    });
+    expect(Object.keys(complexityByName)).not.toContain("Foo[dynamicKey]");
+    expect(
+      Object.entries(complexityByName).some(
+        ([displayName, cognitiveComplexity]) =>
+          displayName.startsWith("Foo.anonymous@") && cognitiveComplexity === 1
+      )
+    ).toBe(true);
+  });
+
+  it("uses assigned names for named function expressions and ignores unassigned callbacks", async () => {
+    const projectRoot = await createTempDir("cognitive-parser-");
+    tempDirs.push(projectRoot);
+    const filePath = path.join(projectRoot, "sample.ts");
+    await writeProjectFiles(projectRoot, {
+      "sample.ts": `declare function consume(callback: (flag: boolean) => number): void;
+
+export const alias = function namedAlias(flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+};
+
+consume(function ignored(flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+});
+`
+    });
+
+    const methods = await parseFileMethods(filePath);
+    expect(toComplexityMap(methods)).toEqual({
+      alias: 1
+    });
+  });
+
+  it("reports syntactic parse diagnostics before discovery", async () => {
+    const projectRoot = await createTempDir("cognitive-parser-");
+    tempDirs.push(projectRoot);
+    const filePath = path.join(projectRoot, "sample.ts");
+    await writeProjectFiles(projectRoot, {
+      "sample.ts": `export function broken() {
+  if (true) {
+    return 1;
+}
+`
+    });
+
+    await expect(analyzeTypeScriptFiles([filePath])).rejects.toThrow("Failed to parse TypeScript source:");
+  });
+
   it("captures leading file comments after BOM, shebang, and whitespace trivia", async () => {
     const projectRoot = await createTempDir("cognitive-parser-");
     tempDirs.push(projectRoot);

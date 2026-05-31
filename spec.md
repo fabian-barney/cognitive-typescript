@@ -130,6 +130,8 @@ The parser shall use the TypeScript compiler API and discover independent functi
 - class-field arrows
 - computed names, rendered consistently such as `Container[name]`
 
+Discovered display names shall preserve deterministic owner context for concrete namespaces, classes, class fields, object literals, and static assignment targets. Owner segments shall be joined with `.`. Static computed names shall use bracket notation, such as `Container[name]` or `registry["key"]`. Dynamic computed assignment names shall not be derived from arbitrary source text; they shall use a stable anonymous positional segment such as `anonymous@<line>:<column>` under any statically known owner.
+
 The parser shall ignore:
 
 - overload signatures without bodies
