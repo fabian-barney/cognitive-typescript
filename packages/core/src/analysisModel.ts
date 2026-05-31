@@ -50,4 +50,6 @@ export type NamedFunctionLike =
   | ts.FunctionExpression
   | ts.ArrowFunction;
 
+export type BodyBearingNamedFunctionLike = NamedFunctionLike & { body: ts.ConciseBody };
+
 export type LogicalOperator = "&&" | "||" | null;

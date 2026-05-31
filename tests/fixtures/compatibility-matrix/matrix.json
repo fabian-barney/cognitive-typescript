@@ -53,6 +53,17 @@
       ]
     },
     {
+      "name": "function discovery hardening",
+      "fixture": "compatibility-matrix/function-discovery-hardening",
+      "expectedMetrics": [
+        { "name": "N.C.method", "cognitiveComplexity": 1 },
+        { "name": "N.obj.outer.inner", "cognitiveComplexity": 1 },
+        { "name": "Holder.tools.run", "cognitiveComplexity": 1 },
+        { "name": "Holder.field.value", "cognitiveComplexity": 1 },
+        { "name": "registry[\"static\"]", "cognitiveComplexity": 1 }
+      ]
+    },
+    {
       "name": "JSX short-circuit rendering",
       "fixture": "compatibility-matrix/jsx-short-circuit",
       "expectedMetrics": [

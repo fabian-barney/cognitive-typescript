@@ -1,7 +1,8 @@
 import ts from "typescript";
 
 import { analyzeFunctionBody, isNestedFunctionLike } from "./cognitiveComplexity";
-import type { InternalMethod, NamedFunctionLike } from "./analysisModel";
+import type { BodyBearingNamedFunctionLike, InternalMethod, NamedFunctionLike } from "./analysisModel";
+import { anonymousName, stablePropertyName, staticElementAccessName, staticExpressionName } from "./staticNames";
 import type { SourceSpan } from "./types";
 import { normalizeSlashes } from "./utils";
 
@@ -45,7 +46,7 @@ function buildFunctionDeclarationMethod(
   sourceFile: ts.SourceFile,
   checker: ts.TypeChecker
 ): InternalMethod | null {
-  if (!ts.isFunctionDeclaration(node) || !node.body) {
+  if (!ts.isFunctionDeclaration(node) || !hasFunctionBody(node)) {
     return null;
   }
   const functionName = node.name?.text ?? inferAnonymousDefaultName(node);
@@ -57,7 +58,7 @@ function buildFunctionDeclarationMethod(
     sourceFile,
     checker,
     functionName,
-    containerName: findContainerName(node),
+    containerName: findContainerName(node, sourceFile),
     symbolNodes: node.name ? [node.name] : []
   });
 }
@@ -67,10 +68,10 @@ function buildConstructorMethod(
   sourceFile: ts.SourceFile,
   checker: ts.TypeChecker
 ): InternalMethod | null {
-  if (!ts.isConstructorDeclaration(node) || !node.body) {
+  if (!ts.isConstructorDeclaration(node) || !hasFunctionBody(node)) {
     return null;
   }
-  const containerName = findContainerName(node);
+  const containerName = findContainerName(node, sourceFile);
   if (!containerName) {
     return null;
   }
@@ -89,29 +90,29 @@ function buildMethodDeclarationMethod(
   sourceFile: ts.SourceFile,
   checker: ts.TypeChecker
 ): InternalMethod | null {
-  if (!ts.isMethodDeclaration(node) || !node.body) {
+  if (!ts.isMethodDeclaration(node) || !hasFunctionBody(node)) {
     return null;
   }
   return createInternalMethod({
     functionNode: node,
     sourceFile,
     checker,
-    functionName: propertyName(node.name),
-    containerName: findContainerName(node),
+    functionName: propertyName(node.name, sourceFile),
+    containerName: findContainerName(node, sourceFile),
     symbolNodes: [node.name]
   });
 }
 
 function buildAccessorMethod(node: ts.Node, sourceFile: ts.SourceFile, checker: ts.TypeChecker): InternalMethod | null {
-  if (!(ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)) || !node.body) {
+  if (!(ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)) || !hasFunctionBody(node)) {
     return null;
   }
   return createInternalMethod({
     functionNode: node,
     sourceFile,
     checker,
-    functionName: `${ts.isGetAccessorDeclaration(node) ? "get" : "set"} ${propertyName(node.name)}`,
-    containerName: findContainerName(node),
+    functionName: `${ts.isGetAccessorDeclaration(node) ? "get" : "set"} ${propertyName(node.name, sourceFile)}`,
+    containerName: findContainerName(node, sourceFile),
     symbolNodes: [node.name]
   });
 }
@@ -121,17 +122,12 @@ function buildAssignedFunctionMethod(
   sourceFile: ts.SourceFile,
   checker: ts.TypeChecker
 ): InternalMethod | null {
-  if (!(ts.isFunctionExpression(node) || ts.isArrowFunction(node))) {
+  if (!(ts.isFunctionExpression(node) || ts.isArrowFunction(node)) || !hasFunctionBody(node)) {
     return null;
   }
-  const assignment = findAssignedFunctionName(node);
+  const assignment = findAssignedFunctionName(node, sourceFile);
   if (!assignment) {
     return null;
-  }
-
-  const symbolNodes = [...assignment.symbolNodes];
-  if (ts.isFunctionExpression(node) && node.name) {
-    symbolNodes.push(node.name);
   }
 
   return createInternalMethod({
@@ -140,10 +136,19 @@ function buildAssignedFunctionMethod(
     checker,
     functionName: assignment.name,
     containerName: assignment.containerName,
-    symbolNodes,
+    symbolNodes: assignedFunctionSymbolNodes(node, assignment.symbolNodes),
     fallbackOwnerName: assignment.fallbackOwnerName,
     fallbackNames: assignment.fallbackNames
   });
+}
+
+function assignedFunctionSymbolNodes(
+  node: ts.FunctionExpression | ts.ArrowFunction,
+  assignmentSymbolNodes: ts.Node[]
+): ts.Node[] {
+  return ts.isFunctionExpression(node) && node.name
+    ? [...assignmentSymbolNodes, node.name]
+    : [...assignmentSymbolNodes];
 }
 
 function createInternalMethod({
@@ -156,7 +161,7 @@ function createInternalMethod({
   fallbackOwnerName,
   fallbackNames
 }: {
-  functionNode: NamedFunctionLike;
+  functionNode: BodyBearingNamedFunctionLike;
   sourceFile: ts.SourceFile;
   checker: ts.TypeChecker;
   functionName: string;
@@ -165,7 +170,7 @@ function createInternalMethod({
   fallbackOwnerName?: string | null;
   fallbackNames?: string[];
 }): InternalMethod {
-  const body = functionNode.body!;
+  const body = functionNode.body;
   const bodySpan = toSourceSpan(body, sourceFile);
   const startLine = sourceFile.getLineAndCharacterOfPosition(functionNode.getStart(sourceFile)).line + 1;
   const endLine = sourceFile.getLineAndCharacterOfPosition(Math.max(body.end - 1, body.getStart(sourceFile))).line + 1;
@@ -273,7 +278,7 @@ function inferAnonymousDefaultName(node: ts.FunctionDeclaration): string | null 
   return node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword) ? "default" : null;
 }
 
-function findAssignedFunctionName(node: ts.FunctionExpression | ts.ArrowFunction): {
+function findAssignedFunctionName(node: ts.FunctionExpression | ts.ArrowFunction, sourceFile: ts.SourceFile): {
   name: string;
   containerName: string | null;
   symbolNodes: ts.Node[];
@@ -282,7 +287,7 @@ function findAssignedFunctionName(node: ts.FunctionExpression | ts.ArrowFunction
 } | null {
   const parent = node.parent;
   for (const resolver of ASSIGNED_FUNCTION_NAME_RESOLVERS) {
-    const assignment = resolver(parent, node);
+    const assignment = resolver(parent, node, sourceFile);
     if (assignment) {
       return assignment;
     }
@@ -292,7 +297,8 @@ function findAssignedFunctionName(node: ts.FunctionExpression | ts.ArrowFunction
 
 type AssignedFunctionNameResolver = (
   parent: ts.Node,
-  node: ts.FunctionExpression | ts.ArrowFunction
+  node: ts.FunctionExpression | ts.ArrowFunction,
+  sourceFile: ts.SourceFile
 ) => {
   name: string;
   containerName: string | null;
@@ -308,9 +314,13 @@ const ASSIGNED_FUNCTION_NAME_RESOLVERS: AssignedFunctionNameResolver[] = [
   assignedNameFromBinaryExpression
 ];
 
-function assignedNameFromVariableDeclaration(parent: ts.Node): ReturnType<AssignedFunctionNameResolver> {
+function assignedNameFromVariableDeclaration(
+  parent: ts.Node,
+  _node: ts.FunctionExpression | ts.ArrowFunction,
+  sourceFile: ts.SourceFile
+): ReturnType<AssignedFunctionNameResolver> {
   if (ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) {
-    const containerName = findContainerName(parent);
+    const containerName = findContainerName(parent, sourceFile);
     return {
       name: parent.name.text,
       containerName,
@@ -322,10 +332,14 @@ function assignedNameFromVariableDeclaration(parent: ts.Node): ReturnType<Assign
   return null;
 }
 
-function assignedNameFromPropertyAssignment(parent: ts.Node): ReturnType<AssignedFunctionNameResolver> {
+function assignedNameFromPropertyAssignment(
+  parent: ts.Node,
+  _node: ts.FunctionExpression | ts.ArrowFunction,
+  sourceFile: ts.SourceFile
+): ReturnType<AssignedFunctionNameResolver> {
   if (ts.isPropertyAssignment(parent)) {
-    const name = propertyName(parent.name);
-    const containerName = inferObjectContainerName(parent.parent);
+    const name = propertyName(parent.name, sourceFile);
+    const containerName = inferObjectContainerName(parent.parent, sourceFile);
     return {
       name,
       containerName,
@@ -337,10 +351,14 @@ function assignedNameFromPropertyAssignment(parent: ts.Node): ReturnType<Assigne
   return null;
 }
 
-function assignedNameFromPropertyDeclaration(parent: ts.Node): ReturnType<AssignedFunctionNameResolver> {
+function assignedNameFromPropertyDeclaration(
+  parent: ts.Node,
+  _node: ts.FunctionExpression | ts.ArrowFunction,
+  sourceFile: ts.SourceFile
+): ReturnType<AssignedFunctionNameResolver> {
   if (ts.isPropertyDeclaration(parent)) {
-    const name = propertyName(parent.name);
-    const containerName = findContainerName(parent);
+    const name = propertyName(parent.name, sourceFile);
+    const containerName = findContainerName(parent, sourceFile);
     return {
       name,
       containerName,
@@ -354,14 +372,15 @@ function assignedNameFromPropertyDeclaration(parent: ts.Node): ReturnType<Assign
 
 function assignedNameFromBinaryExpression(
   parent: ts.Node,
-  node: ts.FunctionExpression | ts.ArrowFunction
+  node: ts.FunctionExpression | ts.ArrowFunction,
+  sourceFile: ts.SourceFile
 ): ReturnType<AssignedFunctionNameResolver> {
   if (
     !(ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.EqualsToken && parent.right === node)
   ) {
     return null;
   }
-  const target = assignmentTarget(parent.left);
+  const target = assignmentTarget(parent.left, sourceFile);
   return {
     name: target.name,
     containerName: target.containerName,
@@ -371,21 +390,26 @@ function assignedNameFromBinaryExpression(
   };
 }
 
-function findContainerName(node: ts.Node): string | null {
+function findContainerName(node: ts.Node, sourceFile: ts.SourceFile): string | null {
+  const segments: string[] = [];
   let current: ts.Node | undefined = node.parent;
   while (current) {
-    const containerName = containerNameFromNode(current);
-    if (containerName) {
-      return containerName;
+    if (ts.isObjectLiteralExpression(current)) {
+      const objectName = inferObjectContainerName(current, sourceFile);
+      return segments.length ? toDisplayName(objectName, segments.join(".")) : objectName;
+    }
+    const segment = containerSegmentFromNode(current);
+    if (segment) {
+      segments.unshift(segment);
     }
     current = current.parent;
   }
-  return null;
+  return segments.length ? segments.join(".") : null;
 }
 
-function inferObjectContainerName(node: ts.ObjectLiteralExpression): string | null {
+function inferObjectContainerName(node: ts.ObjectLiteralExpression, sourceFile: ts.SourceFile): string | null {
   for (const resolver of OBJECT_CONTAINER_RESOLVERS) {
-    const containerName = resolver(node.parent);
+    const containerName = resolver(node.parent, sourceFile);
     if (containerName) {
       return containerName;
     }
@@ -393,7 +417,7 @@ function inferObjectContainerName(node: ts.ObjectLiteralExpression): string | nu
   return null;
 }
 
-type ObjectContainerResolver = (parent: ts.Node) => string | null;
+type ObjectContainerResolver = (parent: ts.Node, sourceFile: ts.SourceFile) => string | null;
 
 const OBJECT_CONTAINER_RESOLVERS: ObjectContainerResolver[] = [
   containerFromVariableDeclaration,
@@ -402,56 +426,53 @@ const OBJECT_CONTAINER_RESOLVERS: ObjectContainerResolver[] = [
   containerFromBinaryAssignment
 ];
 
-function containerFromVariableDeclaration(parent: ts.Node): string | null {
+function containerFromVariableDeclaration(parent: ts.Node, sourceFile: ts.SourceFile): string | null {
   if (ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) {
-    return parent.name.text;
+    return toDisplayName(findContainerName(parent, sourceFile), parent.name.text);
   }
   return null;
 }
 
-function containerFromPropertyAssignment(parent: ts.Node): string | null {
+function containerFromPropertyAssignment(parent: ts.Node, sourceFile: ts.SourceFile): string | null {
   if (ts.isPropertyAssignment(parent)) {
-    return propertyName(parent.name);
+    return toDisplayName(inferObjectContainerName(parent.parent, sourceFile), propertyName(parent.name, sourceFile));
   }
   return null;
 }
 
-function containerFromPropertyDeclaration(parent: ts.Node): string | null {
+function containerFromPropertyDeclaration(parent: ts.Node, sourceFile: ts.SourceFile): string | null {
   if (ts.isPropertyDeclaration(parent)) {
-    return propertyName(parent.name);
+    return toDisplayName(findContainerName(parent, sourceFile), propertyName(parent.name, sourceFile));
   }
   return null;
 }
 
-function containerFromBinaryAssignment(parent: ts.Node): string | null {
+function containerFromBinaryAssignment(parent: ts.Node, sourceFile: ts.SourceFile): string | null {
   if (!isAssignmentBinaryExpression(parent)) {
     return null;
   }
-  const target = assignmentTarget(parent.left);
+  const target = assignmentTarget(parent.left, sourceFile);
   return toDisplayName(target.containerName, target.name);
 }
 
-function assignmentTarget(node: ts.Expression): { name: string; containerName: string | null } {
+function assignmentTarget(node: ts.Expression, sourceFile: ts.SourceFile): { name: string; containerName: string | null } {
   for (const resolver of ASSIGNMENT_TARGET_RESOLVERS) {
-    const target = resolver(node);
+    const target = resolver(node, sourceFile);
     if (target) {
       return target;
     }
   }
-  return createAssignmentTarget("<assigned>", null);
+  return createAssignmentTarget(anonymousName(node, sourceFile), null);
 }
 
-function propertyName(name: ts.PropertyName): string {
-  if (ts.isPrivateIdentifier(name)) {
-    return name.getText();
-  }
-  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) {
-    return name.text;
-  }
-  return name.getText();
+function propertyName(name: ts.PropertyName, sourceFile: ts.SourceFile): string {
+  return stablePropertyName(name, sourceFile);
 }
 
 function toDisplayName(containerName: string | null, functionName: string): string {
+  if (!functionName) {
+    return containerName ?? "";
+  }
   if (!containerName) {
     return functionName;
   }
@@ -572,11 +593,14 @@ function isAlwaysDeclarativeStatement(statement: ts.Statement): boolean {
   return isDeclarativeTypeStatement(statement) || ts.isVariableStatement(statement) || ts.isEmptyStatement(statement);
 }
 
-function containerNameFromNode(node: ts.Node): string | null {
+function containerSegmentFromNode(node: ts.Node): string | null {
   if ((ts.isClassDeclaration(node) || ts.isClassExpression(node)) && node.name) {
     return node.name.text;
   }
-  return ts.isObjectLiteralExpression(node) ? inferObjectContainerName(node) : null;
+  if (ts.isModuleDeclaration(node) && ts.isIdentifier(node.name)) {
+    return node.name.text;
+  }
+  return null;
 }
 
 function isAssignmentBinaryExpression(node: ts.Node): node is ts.BinaryExpression {
@@ -590,7 +614,10 @@ function createAssignmentTarget(
   return { name, containerName };
 }
 
-type AssignmentTargetResolver = (node: ts.Expression) => { name: string; containerName: string | null } | null;
+type AssignmentTargetResolver = (
+  node: ts.Expression,
+  sourceFile: ts.SourceFile
+) => { name: string; containerName: string | null } | null;
 
 const ASSIGNMENT_TARGET_RESOLVERS: AssignmentTargetResolver[] = [
   assignmentTargetFromIdentifier,
@@ -598,20 +625,34 @@ const ASSIGNMENT_TARGET_RESOLVERS: AssignmentTargetResolver[] = [
   assignmentTargetFromElementAccess
 ];
 
-function assignmentTargetFromIdentifier(node: ts.Expression): { name: string; containerName: string | null } | null {
+function assignmentTargetFromIdentifier(
+  node: ts.Expression
+): { name: string; containerName: string | null } | null {
   return ts.isIdentifier(node) ? createAssignmentTarget(node.text, null) : null;
 }
 
 function assignmentTargetFromPropertyAccess(
   node: ts.Expression
 ): { name: string; containerName: string | null } | null {
-  return ts.isPropertyAccessExpression(node) ? createAssignmentTarget(node.name.text, node.expression.getText()) : null;
+  return ts.isPropertyAccessExpression(node)
+    ? createAssignmentTarget(node.name.text, staticExpressionName(node.expression))
+    : null;
 }
 
-function assignmentTargetFromElementAccess(node: ts.Expression): { name: string; containerName: string | null } | null {
+function assignmentTargetFromElementAccess(
+  node: ts.Expression,
+  sourceFile: ts.SourceFile
+): { name: string; containerName: string | null } | null {
   return ts.isElementAccessExpression(node)
-    ? createAssignmentTarget(`[${node.argumentExpression?.getText() ?? ""}]`, node.expression.getText())
+    ? createAssignmentTarget(
+        staticElementAccessName(node.argumentExpression) ?? anonymousName(node.argumentExpression ?? node, sourceFile),
+        staticExpressionName(node.expression)
+      )
     : null;
+}
+
+function hasFunctionBody(node: NamedFunctionLike): node is BodyBearingNamedFunctionLike {
+  return node.body !== undefined;
 }
 
 function isMethodLikeObjectProperty(property: ts.ObjectLiteralElementLike): boolean {
