@@ -291,6 +291,8 @@ Report path validation is strict:
 
 Verified and unverified syntax shapes are tracked in [docs/compatibility-matrix.md](docs/compatibility-matrix.md). The matrix is backed by fixtures under `tests/fixtures/compatibility-matrix/`.
 
+Cognitive Complexity scoring for `&&`, `||`, `??`, optional chaining, logical assignment, and JSX short-circuit rendering is documented in [docs/operator-semantics.md](docs/operator-semantics.md).
+
 ## Release
 
 The default release path uses npm Trusted Publishing from `.github/workflows/release.yml`. Tag `v<version>` from `main` after the build workflow is green. The tag-triggered release workflow verifies package versions, renders the GitHub release notes from `CHANGELOG.md`, runs `npm test`, `npm run cognitive-typescript-check`, and `npm run crap-typescript-check`, then publishes the four public npm packages and creates the GitHub release.

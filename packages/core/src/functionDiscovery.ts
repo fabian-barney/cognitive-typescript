@@ -278,7 +278,10 @@ function inferAnonymousDefaultName(node: ts.FunctionDeclaration): string | null 
   return node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword) ? "default" : null;
 }
 
-function findAssignedFunctionName(node: ts.FunctionExpression | ts.ArrowFunction, sourceFile: ts.SourceFile): {
+function findAssignedFunctionName(
+  node: ts.FunctionExpression | ts.ArrowFunction,
+  sourceFile: ts.SourceFile
+): {
   name: string;
   containerName: string | null;
   symbolNodes: ts.Node[];
@@ -455,7 +458,10 @@ function containerFromBinaryAssignment(parent: ts.Node, sourceFile: ts.SourceFil
   return toDisplayName(target.containerName, target.name);
 }
 
-function assignmentTarget(node: ts.Expression, sourceFile: ts.SourceFile): { name: string; containerName: string | null } {
+function assignmentTarget(
+  node: ts.Expression,
+  sourceFile: ts.SourceFile
+): { name: string; containerName: string | null } {
   for (const resolver of ASSIGNMENT_TARGET_RESOLVERS) {
     const target = resolver(node, sourceFile);
     if (target) {
@@ -625,9 +631,7 @@ const ASSIGNMENT_TARGET_RESOLVERS: AssignmentTargetResolver[] = [
   assignmentTargetFromElementAccess
 ];
 
-function assignmentTargetFromIdentifier(
-  node: ts.Expression
-): { name: string; containerName: string | null } | null {
+function assignmentTargetFromIdentifier(node: ts.Expression): { name: string; containerName: string | null } | null {
   return ts.isIdentifier(node) ? createAssignmentTarget(node.text, null) : null;
 }
 

@@ -87,6 +87,26 @@
       ]
     },
     {
+      "name": "operator semantics",
+      "fixture": "compatibility-matrix/operator-semantics",
+      "expectedMetrics": [
+        { "name": "Widget", "cognitiveComplexity": 0 },
+        { "name": "Banner", "cognitiveComplexity": 2 },
+        { "name": "andRun", "cognitiveComplexity": 1 },
+        { "name": "orRun", "cognitiveComplexity": 1 },
+        { "name": "mixedTransitions", "cognitiveComplexity": 3 },
+        { "name": "defaultNullish", "cognitiveComplexity": 0 },
+        { "name": "nonDefaultNullish", "cognitiveComplexity": 0 },
+        { "name": "optionalAccess", "cognitiveComplexity": 0 },
+        { "name": "logicalAssignments", "cognitiveComplexity": 0 },
+        { "name": "negatedGroup", "cognitiveComplexity": 3 },
+        { "name": "nestedTernary", "cognitiveComplexity": 5 },
+        { "name": "switchDefault", "cognitiveComplexity": 1 },
+        { "name": "inner", "cognitiveComplexity": 1 },
+        { "name": "outer", "cognitiveComplexity": 0 }
+      ]
+    },
+    {
       "name": "nested functions",
       "fixture": "compatibility-matrix/nested-functions",
       "expectedMetrics": [
