@@ -57,19 +57,13 @@ function staticTerminalExpressionName(expression: ts.Expression, thisOrSuperName
   return isThisOrSuperKeyword(expression) ? thisOrSuperName : null;
 }
 
-function staticPropertyAccessExpressionName(
-  expression: ts.Expression,
-  thisOrSuperName: string | null
-): string | null {
+function staticPropertyAccessExpressionName(expression: ts.Expression, thisOrSuperName: string | null): string | null {
   return ts.isPropertyAccessExpression(expression)
     ? joinName(staticExpressionName(expression.expression, thisOrSuperName), expression.name.text)
     : null;
 }
 
-function staticElementAccessExpressionName(
-  expression: ts.Expression,
-  thisOrSuperName: string | null
-): string | null {
+function staticElementAccessExpressionName(expression: ts.Expression, thisOrSuperName: string | null): string | null {
   return ts.isElementAccessExpression(expression)
     ? joinName(
         staticExpressionName(expression.expression, thisOrSuperName),

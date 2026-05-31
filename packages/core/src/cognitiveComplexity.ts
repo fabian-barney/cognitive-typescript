@@ -327,9 +327,7 @@ function resolveElementAccessCallTarget(
   expression: ts.Expression,
   containerName: string | null
 ): Pick<CallTarget, "name" | "ownerName"> | null {
-  const name = ts.isElementAccessExpression(expression)
-    ? staticElementAccessName(expression.argumentExpression)
-    : null;
+  const name = ts.isElementAccessExpression(expression) ? staticElementAccessName(expression.argumentExpression) : null;
   return ts.isElementAccessExpression(expression) && name
     ? {
         name,

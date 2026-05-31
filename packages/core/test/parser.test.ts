@@ -249,8 +249,7 @@ Foo[dynamicKey] = function (flag: boolean): number {
     expect(Object.keys(complexityByName)).not.toContain("Foo[dynamicKey]");
     expect(
       Object.entries(complexityByName).some(
-        ([displayName, cognitiveComplexity]) =>
-          displayName.startsWith("Foo.anonymous@") && cognitiveComplexity === 1
+        ([displayName, cognitiveComplexity]) => displayName.startsWith("Foo.anonymous@") && cognitiveComplexity === 1
       )
     ).toBe(true);
   });

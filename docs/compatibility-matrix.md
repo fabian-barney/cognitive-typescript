@@ -20,6 +20,7 @@ This matrix records the TypeScript syntax and Cognitive Complexity behaviors cur
 | Nested functions | `tests/fixtures/compatibility-matrix/nested-functions` | Verifies nested functions are scored independently and do not contribute to their enclosing function. |
 | Faux-class wrappers | `tests/fixtures/compatibility-matrix/faux-class-wrapper` | Verifies top-level declarative wrappers do not suppress legitimate exported property-assigned functions. |
 | Logical shorthand exclusions | `tests/fixtures/compatibility-matrix/logical-shorthand` | Verifies `??` is ignored and mixed `&&` / `||` sequences reset counting boundaries. |
+| Operator semantics | `tests/fixtures/compatibility-matrix/operator-semantics` | Verifies the documented `&&`, `||`, `??`, `?.`, logical assignment, JSX shorthand, ternary, switch/default, and nested-function rules. |
 | JSX short-circuit rendering | `tests/fixtures/compatibility-matrix/jsx-short-circuit` | Verifies JSX rendering shorthand is ignored while non-JSX logical control flow is still scored. |
 | Labeled jumps | `tests/fixtures/compatibility-matrix/labeled-jumps` | Verifies labeled `break` and `continue` add complexity. |
 | Recursion cycles | `tests/fixtures/compatibility-matrix/recursion-cycle` | Verifies direct project-local recursion cycles add the white-paper recursion increment. |
@@ -30,13 +31,23 @@ The current implementation intentionally treats these forms as shorthand and doe
 
 - optional chaining
 - nullish coalescing (`??`)
+- logical assignment (`??=`, `&&=`, `||=`)
 - JSX short-circuit rendering expressions
+
+The current implementation intentionally scores logical `&&` and `||` sequences by transition:
+
+- `a && b && c` adds one logical-operator increment
+- `a || b || c` adds one logical-operator increment
+- `a && b || c && d` adds one increment for each `&&` / `||` transition boundary
+- negated logical groups start a new sequence boundary
 
 The current implementation intentionally treats these forms as independent score roots:
 
 - nested functions
 - class-field arrow functions
 - object property-assigned functions
+
+See [Cognitive Complexity Operator Semantics](operator-semantics.md) for the cross-tool comparison and rationale.
 
 ## Unverified
 

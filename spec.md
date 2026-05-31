@@ -165,11 +165,20 @@ The analyzer shall score:
 
 The analyzer shall derive TypeScript and JavaScript behavior as follows:
 
-- optional chaining shall be ignored as shorthand
-- `??` shall be ignored as shorthand
-- mixed `&&` and `||` sequences shall reset sequence counting boundaries
+- `&&` and `||` shall be scored by logical-operator sequence transitions
+- repeated `&&` operators in the same flattened logical sequence shall add one total increment
+- repeated `||` operators in the same flattened logical sequence shall add one total increment
+- mixed `&&` and `||` sequences shall reset sequence counting boundaries and add an increment at each transition
 - negated logical groups shall reset sequence counting boundaries
+- optional chaining shall be ignored as shorthand
+- `??` shall be ignored as shorthand in default-value and non-default contexts
+- `??=`, `&&=`, and `||=` shall be ignored as assignment shorthand
 - JSX short-circuit rendering forms shall be ignored when they act as rendering shorthand
+
+These JavaScript and TypeScript operator semantics intentionally preserve the
+existing score model. They do not exactly mirror a single external tool: `&&`
+and `||` follow the Sonar white-paper-style transition model, while `??`,
+optional chaining, and logical assignment are treated as shorthand.
 
 ## 8. Recursion
 

@@ -30,17 +30,17 @@ class Example {
     expect(staticPropertyName(names[2])).toBe("quoted");
     expect(staticPropertyName(names[3])).toBe("1");
     expect(staticPropertyName(names[4])).toBe("[key]");
-    expect(staticPropertyName(names[5])).toBe("[\"literal\"]");
+    expect(staticPropertyName(names[5])).toBe('["literal"]');
     expect(staticPropertyName(names[6])).toBeNull();
     expect(stablePropertyName(names[6], sourceFile)).toMatch(/^anonymous@\d+:\d+$/);
   });
 
   it("extracts only static element-access names", () => {
     expect(staticElementAccessName(undefined)).toBeNull();
-    expect(staticElementAccessName(elementArgument("target[\"literal\"]"))).toBe("[\"literal\"]");
-    expect(staticElementAccessName(elementArgument("target[`template`]"))).toBe("[\"template\"]");
+    expect(staticElementAccessName(elementArgument('target["literal"]'))).toBe('["literal"]');
+    expect(staticElementAccessName(elementArgument("target[`template`]"))).toBe('["template"]');
     expect(staticElementAccessName(elementArgument("target[1]"))).toBe("[1]");
-    expect(staticElementAccessName(elementArgument("target[(\"wrapped\")]"))).toBe("[\"wrapped\"]");
+    expect(staticElementAccessName(elementArgument('target[("wrapped")]'))).toBe('["wrapped"]');
     expect(staticElementAccessName(elementArgument("target[key]"))).toBeNull();
   });
 
@@ -48,7 +48,7 @@ class Example {
     expect(staticExpressionName(expression("target"))).toBe("target");
     expect(staticExpressionName(expression("this"), "Container")).toBe("Container");
     expect(staticExpressionName(expression("target.value"))).toBe("target.value");
-    expect(staticExpressionName(expression("target[\"value\"]"))).toBe("target[\"value\"]");
+    expect(staticExpressionName(expression('target["value"]'))).toBe('target["value"]');
     expect(staticExpressionName(expression("target[key]"))).toBeNull();
     expect(staticExpressionName(expression("factory().value"))).toBeNull();
   });
@@ -70,7 +70,7 @@ function source(text: string): ts.SourceFile {
 
 function classMemberNames(sourceFile: ts.SourceFile): ts.PropertyName[] {
   const classDeclaration = sourceFile.statements.find(ts.isClassDeclaration);
-  return classDeclaration?.members.flatMap((member) => member.name ? [member.name] : []) ?? [];
+  return classDeclaration?.members.flatMap((member) => (member.name ? [member.name] : [])) ?? [];
 }
 
 function elementArgument(text: string): ts.Expression | undefined {
