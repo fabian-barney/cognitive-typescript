@@ -224,8 +224,8 @@ export function safe(value: number): number {
     expect(stdout.toString()).toBe("");
     expect(primary.methods).toEqual([expect.objectContaining({ method: "tooComplex" })]);
     expect(junit).toContain('tests="2"');
-    expect(junit).toContain('name="tooComplex:1"');
-    expect(junit).toContain('name="safe:20"');
+    expect(junit).toContain('name="tooComplex:1 [CC=');
+    expect(junit).toContain('name="safe:20 [CC=');
     expect(junit).toContain("Cognitive Complexity: 28");
     expect(stderr.toString()).toContain("Cognitive Complexity threshold exceeded");
   });

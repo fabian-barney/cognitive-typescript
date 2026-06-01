@@ -56,7 +56,11 @@ Primary formats:
 
 The CLI is pure static analysis. It does not execute tests, collect coverage, or compute CRAP scores.
 
-`--junit-report` is opt-in on the CLI. Both `--output` and `--junit-report` must stay inside the project root and must target files rather than the project root, filesystem roots, or existing directories.
+`--junit-report` is opt-in on the CLI. JUnit testcases include GitLab-visible
+metric details in `name` as `method:lineStart [CC=complexity]` and in
+testcase-level `system-out`. Both `--output` and `--junit-report` must stay
+inside the project root and must target files rather than the project root,
+filesystem roots, or existing directories.
 
 ## Exit Codes
 
