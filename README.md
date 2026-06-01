@@ -271,6 +271,8 @@ Exclusions are applied before threshold evaluation. Full primary reports and JUn
 
 - Primary reports describe the selected functions only.
 - Full primary reports and JUnit sidecars include exclusion audit counts.
+- JUnit testcases include GitLab-visible metric details in `name` as
+  `method:lineStart [CC=complexity]` and in testcase-level `system-out`.
 - Compact agent primary reports stay focused on actionable failures and omit exclusion audit detail by default.
 - Excluded files and functions are removed before report generation and threshold evaluation.
 

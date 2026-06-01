@@ -202,7 +202,12 @@ describe("report formatting", () => {
     const output = formatJunitReport(
       buildAnalysisReport(
         [
-          metric({ displayName: 'risky "quoted" <value>', relativePath: "src/quoted&file.ts", cognitiveComplexity: 16 })
+          metric({
+            displayName: 'risky "quoted" <value>',
+            relativePath: "src/quoted&file.ts",
+            cognitiveComplexity: 16
+          }),
+          metric()
         ],
         15,
         false,
@@ -213,15 +218,18 @@ describe("report formatting", () => {
     );
 
     expect(output).toContain(
-      '<testsuites name="cognitive-typescript" tests="1" failures="1" skipped="0" errors="0" time="0.250000">'
+      '<testsuites name="cognitive-typescript" tests="2" failures="1" skipped="0" errors="0" time="0.250000">'
     );
     expect(output).toContain('classname="src/quoted&amp;file.ts"');
-    expect(output).toContain('name="risky &quot;quoted&quot; &lt;value&gt;:1"');
+    expect(output).toContain('name="risky &quot;quoted&quot; &lt;value&gt;:1 [CC=16]"');
+    expect(output).toContain('name="safe:1 [CC=1]"');
     expect(output).toContain('<property name="status" value="failed"/>');
     expect(output).toContain('<property name="exclusion.discoveredFiles" value="3"/>');
     expect(output).toContain('<property name="exclusion.excludedFunctions" value="1"/>');
     expect(output).toContain("Cognitive Complexity: 16");
     expect(output).toContain("Threshold: 15");
+    expect(output).toContain("<system-out>Cognitive Complexity: 16");
+    expect(output).toContain("<system-out>Cognitive Complexity: 1");
     expect(output).toContain("Source: src/quoted&amp;file.ts:1-3");
   });
 

@@ -335,12 +335,13 @@ function toJunitTestcaseXml(
     properties: {
       property: methodProperties(entry, omitRedundancy).map(([name, value]) => toXmlProperty(name, value))
     },
+    "system-out": junitDiagnosticText(entry, threshold),
     ...junitStatusXml(entry, threshold)
   };
 }
 
 function junitTestcaseName(entry: MethodReportEntry): string {
-  return `${entry.method}:${entry.lineStart}`;
+  return `${entry.method}:${entry.lineStart} [CC=${entry.cc}]`;
 }
 
 function toXmlProperty(name: string, value: string): XmlNode {

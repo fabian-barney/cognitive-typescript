@@ -60,6 +60,10 @@ The core returns structured metrics suitable for CI quality gates and later auto
 
 `AnalysisResult.exclusionAudit` reports discovered, analyzed, and excluded file/function counts plus per-reason tallies. Full reports and JUnit sidecars can publish that audit data directly, while compact agent primary output omits it by default.
 
+JUnit testcases include GitLab-visible metric details in `name` as
+`method:lineStart [CC=complexity]` and in testcase-level `system-out`, while
+custom properties remain available for consumers that parse them.
+
 The core stays in the static-analysis lane: it does not execute tests, enable coverage, consume Istanbul or LCOV reports, or compute CRAP scores.
 
 See the [main repository](https://github.com/fabian-barney/cognitive-typescript) for full documentation.
