@@ -44,7 +44,7 @@ export function second(flag: boolean): number {
     expect(result.thresholdExceeded).toBe(false);
   });
 
-  it("reports threshold failures when any function exceeds 15", async () => {
+  it("reports threshold failures when any function exceeds the default threshold", async () => {
     const projectRoot = await createTempDir("cognitive-analysis-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {

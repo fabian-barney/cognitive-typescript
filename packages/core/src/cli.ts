@@ -35,7 +35,7 @@ Options:
                              Enable conservative generated-code exclusions (default: true)
   --output <path>            Write the primary report to a file instead of stdout
   --junit-report <path>      Also write a full JUnit XML report for CI test-report UIs
-  --threshold <integer>      Override the Cognitive Complexity threshold (default: 15)
+  --threshold <integer>      Override the Cognitive Complexity threshold (default: 8)
 
 Behavior:
   (no args)                  Analyze all TypeScript files under any nested src/ tree

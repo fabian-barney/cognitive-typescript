@@ -6,7 +6,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
-- No unreleased changes.
+### Changed
+
+- Reduced the default Cognitive Complexity threshold from `15` to `8`.
 
 ## [0.2.2] - 2026-06-19
 
