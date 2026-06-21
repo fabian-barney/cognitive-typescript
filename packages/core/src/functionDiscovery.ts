@@ -398,15 +398,32 @@ function findContainerName(node: ts.Node, sourceFile: ts.SourceFile): string | n
   let current: ts.Node | undefined = node.parent;
   while (current) {
     if (ts.isObjectLiteralExpression(current)) {
-      const objectName = inferObjectContainerName(current, sourceFile);
-      return segments.length ? toDisplayName(objectName, segments.join(".")) : objectName;
+      return objectContainerName(current, segments, sourceFile);
     }
-    const segment = containerSegmentFromNode(current);
-    if (segment) {
-      segments.unshift(segment);
-    }
+    prependContainerSegment(segments, current);
     current = current.parent;
   }
+  return joinedSegments(segments);
+}
+
+function objectContainerName(
+  node: ts.ObjectLiteralExpression,
+  segments: readonly string[],
+  sourceFile: ts.SourceFile
+): string | null {
+  const objectName = inferObjectContainerName(node, sourceFile);
+  const nestedName = joinedSegments(segments);
+  return nestedName ? toDisplayName(objectName, nestedName) : objectName;
+}
+
+function prependContainerSegment(segments: string[], node: ts.Node): void {
+  const segment = containerSegmentFromNode(node);
+  if (segment) {
+    segments.unshift(segment);
+  }
+}
+
+function joinedSegments(segments: readonly string[]): string | null {
   return segments.length ? segments.join(".") : null;
 }
 

@@ -38,7 +38,7 @@ npx cognitive-typescript --format json --output reports/cognitive.json --junit-r
                              Omit redundant per-method status in the primary report
 --output <path>              Write the primary report to a file instead of stdout
 --junit-report <path>        Also write a full JUnit XML report for CI test-report UIs
---threshold <integer>        Override the Cognitive Complexity threshold (default: 15)
+--threshold <integer>        Override the Cognitive Complexity threshold (default: 8)
 --agent                      Compact the primary report to actionable failures by default
 ```
 

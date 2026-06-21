@@ -16,7 +16,7 @@ It performs pure static analysis using the Sonar Cognitive Complexity white pape
 - The implementation follows the SonarSource Cognitive Complexity white paper.
 - It is pure static analysis.
 - It does not execute tests, enable coverage, consume Istanbul or LCOV reports, or compute CRAP scores.
-- The default threshold is `15`, and the CLI and reporter integrations can override it.
+- The default threshold is `8`, and the CLI and reporter integrations can override it.
 
 ## Build and Test
 
@@ -97,7 +97,7 @@ npx cognitive-typescript src/server.ts packages/web
                              Omit redundant per-method status in the primary report
 --output <path>              Write the primary report to a file instead of stdout
 --junit-report <path>        Also write a full JUnit XML report for CI test-report UIs
---threshold <integer>        Override the Cognitive Complexity threshold (default: 15)
+--threshold <integer>        Override the Cognitive Complexity threshold (default: 8)
 --agent                      Compact the primary report to actionable failures by default
 ```
 

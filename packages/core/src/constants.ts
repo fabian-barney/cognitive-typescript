@@ -1,4 +1,4 @@
-export const COGNITIVE_COMPLEXITY_THRESHOLD = 15;
+export const COGNITIVE_COMPLEXITY_THRESHOLD = 8;
 export const NO_FILES_MESSAGE = "No TypeScript files to analyze.";
 export const NO_ANALYZABLE_FUNCTIONS_MESSAGE = "No function-like bodies to analyze.";
 

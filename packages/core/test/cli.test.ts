@@ -124,7 +124,7 @@ describe("cli", () => {
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toBe(
       "status: passed\n" +
-        "threshold: 15\n" +
+        "threshold: 8\n" +
         "methods[0]:\n" +
         "exclusions:\n" +
         "  discoveredFiles: 0\n" +
@@ -174,7 +174,7 @@ describe("cli", () => {
 
     expect(exitCode).toBe(2);
     expect(stdout.toString()).toContain("tooComplex");
-    expect(stderr.toString()).toContain("Cognitive Complexity threshold exceeded: 28 > 15");
+    expect(stderr.toString()).toContain("Cognitive Complexity threshold exceeded: 28 > 8");
   });
 
   it("uses configured thresholds for exit code decisions", async () => {
@@ -192,6 +192,14 @@ describe("cli", () => {
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toContain("threshold: 30");
     expect(stderr.toString()).toBe("");
+
+    const oldDefaultStdout = new StringWriter();
+    const oldDefaultStderr = new StringWriter();
+    const oldDefaultExitCode = await runCli(["--threshold=15"], projectRoot, oldDefaultStdout, oldDefaultStderr);
+
+    expect(oldDefaultExitCode).toBe(2);
+    expect(oldDefaultStdout.toString()).toContain("threshold: 15");
+    expect(oldDefaultStderr.toString()).toContain("Cognitive Complexity threshold exceeded: 28 > 15");
   });
 
   it("writes primary output files and full JUnit sidecars", async () => {

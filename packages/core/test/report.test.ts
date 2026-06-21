@@ -58,7 +58,7 @@ describe("report formatting", () => {
     ]);
 
     expect(report.status).toBe("failed");
-    expect(report.threshold).toBe(15);
+    expect(report.threshold).toBe(8);
     expect(report.methods).toEqual([
       {
         status: "failed",
@@ -107,7 +107,7 @@ describe("report formatting", () => {
       )
     ).toEqual({
       status: "failed",
-      threshold: 15,
+      threshold: 8,
       methods: [
         {
           status: "failed",
@@ -120,8 +120,8 @@ describe("report formatting", () => {
       ],
       exclusions: audit()
     });
-    expect(formatTextReport(buildAnalysisReport(metrics, 15, false, audit()))).toContain("exclusions:");
-    expect(formatToonReport(buildAnalysisReport(metrics, 15, false, audit()))).toContain("exclusions:");
+    expect(formatTextReport(buildAnalysisReport(metrics, 8, false, audit()))).toContain("exclusions:");
+    expect(formatToonReport(buildAnalysisReport(metrics, 8, false, audit()))).toContain("exclusions:");
   });
 
   it("omits TOON exclusion lines when no audit is present", () => {
@@ -138,7 +138,7 @@ describe("report formatting", () => {
     ) as { status: string; threshold: number; methods: Array<Record<string, unknown>> };
 
     expect(parsed.status).toBe("failed");
-    expect(parsed.threshold).toBe(15);
+    expect(parsed.threshold).toBe(8);
     expect(parsed.methods).toEqual([
       expect.objectContaining({
         method: "risky",
@@ -149,7 +149,7 @@ describe("report formatting", () => {
   });
 
   it("uses agent as failures-only plus omit-redundancy defaults", () => {
-    const report = buildAgentAnalysisReport([metric(), metric({ displayName: "risky", cognitiveComplexity: 16 })], 15);
+    const report = buildAgentAnalysisReport([metric(), metric({ displayName: "risky", cognitiveComplexity: 16 })], 8);
     const parsed = JSON.parse(
       formatAnalysisReport([metric(), metric({ displayName: "risky", cognitiveComplexity: 16 })], {
         format: "json",
@@ -166,9 +166,9 @@ describe("report formatting", () => {
   });
 
   it("can include exclusion audit in compact reports when explicitly requested", () => {
-    expect(buildAgentAnalysisReport([metric({ displayName: "risky", cognitiveComplexity: 16 })], 15, audit())).toEqual({
+    expect(buildAgentAnalysisReport([metric({ displayName: "risky", cognitiveComplexity: 16 })], 8, audit())).toEqual({
       status: "failed",
-      threshold: 15,
+      threshold: 8,
       methods: [
         {
           cc: 16,
@@ -183,9 +183,9 @@ describe("report formatting", () => {
   });
 
   it("does not add a blank separator before exclusions when there are no methods", () => {
-    expect(formatTextReport(buildAnalysisReport([], 15, false, audit()))).toBe(
+    expect(formatTextReport(buildAnalysisReport([], 8, false, audit()))).toBe(
       "status: passed\n" +
-        "threshold: 15\n" +
+        "threshold: 8\n" +
         "methods[0]:\n" +
         "exclusions:\n" +
         "  discoveredFiles: 3\n" +
@@ -209,7 +209,7 @@ describe("report formatting", () => {
           }),
           metric()
         ],
-        15,
+        8,
         false,
         audit()
       ),
@@ -227,7 +227,7 @@ describe("report formatting", () => {
     expect(output).toContain('<property name="exclusion.discoveredFiles" value="3"/>');
     expect(output).toContain('<property name="exclusion.excludedFunctions" value="1"/>');
     expect(output).toContain("Cognitive Complexity: 16");
-    expect(output).toContain("Threshold: 15");
+    expect(output).toContain("Threshold: 8");
     expect(output).toContain("<system-out>Cognitive Complexity: 16");
     expect(output).toContain("<system-out>Cognitive Complexity: 1");
     expect(output).toContain("Source: src/quoted&amp;file.ts:1-3");
