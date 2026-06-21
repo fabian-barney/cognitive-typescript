@@ -10,7 +10,7 @@ It shall:
 - parse function-like bodies with the TypeScript compiler API
 - compute Cognitive Complexity using the Sonar white-paper rules, with TypeScript-specific derivations
 - report the worst functions first
-- fail when any analyzed function exceeds the fixed threshold of `8`
+- fail when any analyzed function exceeds the configured threshold, which defaults to `8`
 
 ## 2. Scope
 
@@ -27,7 +27,6 @@ This specification defines:
 
 This specification does not define:
 
-- configurable thresholds
 - coverage processing
 - non-TypeScript source analysis
 - machine-readable report formats
@@ -211,11 +210,11 @@ If files are selected but no function-like bodies are analyzable:
 
 ## 10. Threshold
 
-The fixed threshold shall be `8`.
+The default threshold shall be `8`. A finite positive threshold may be configured.
 
-If the maximum Cognitive Complexity exceeds `8`:
+If the maximum Cognitive Complexity exceeds the configured threshold:
 
-- the CLI shall print `Cognitive Complexity threshold exceeded: <max> > 8` to stderr
+- the CLI shall print `Cognitive Complexity threshold exceeded: <max> > <threshold>` to stderr
 - the CLI shall exit with code `2`
 
 Otherwise the CLI shall exit with code `0`.
