@@ -210,7 +210,7 @@ If files are selected but no function-like bodies are analyzable:
 
 ## 10. Threshold
 
-The default threshold shall be `8`. A finite positive threshold may be configured.
+The default threshold shall be `8`. A positive integer threshold may be configured.
 
 If the maximum Cognitive Complexity exceeds the configured threshold:
 
