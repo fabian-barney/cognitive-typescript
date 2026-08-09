@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { analyzeProject } from "../src/index";
-import { createTempDir, disposeTempDir, writeProjectFiles } from "./testUtils";
+import { analyzeProject, COGNITIVE_COMPLEXITY_THRESHOLD } from "../src/index";
+import { createTempDir, disposeTempDir, initGitRepository, runProcess, writeProjectFiles } from "./testUtils";
 
 const tempDirs: string[] = [];
 
@@ -58,9 +58,48 @@ export function safe(value: number): number {
     });
 
     const result = await analyzeProject({ projectRoot });
+    expect(result.threshold).toBe(COGNITIVE_COMPLEXITY_THRESHOLD);
     expect(result.thresholdExceeded).toBe(true);
     expect(result.maxCognitiveComplexity).toBe(28);
     expect(result.metrics.some((metric) => metric.displayName === "tooComplex")).toBe(true);
+  });
+
+  it("analyzes only changed source files when requested", async () => {
+    const projectRoot = await createTempDir("cognitive-analysis-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/changed.ts": "export function changed(): number { return 1; }\n",
+      "src/unchanged.ts": "export function unchanged(): number { return 2; }\n"
+    });
+    await initGitRepository(projectRoot);
+    await runProcess("git", ["add", "."], projectRoot);
+    await runProcess("git", ["commit", "-m", "baseline"], projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "src/changed.ts": "export function changed(): number { return 3; }\n"
+    });
+
+    const result = await analyzeProject({ projectRoot, changedOnly: true });
+
+    expect(result.selectedFiles).toHaveLength(1);
+    expect(result.metrics.map((metric) => metric.displayName)).toEqual(["changed"]);
+  });
+
+  it("uses the current working directory when no project root is provided", async () => {
+    const projectRoot = await createTempDir("cognitive-analysis-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": "export function sample(): number { return 1; }\n"
+    });
+    const previousWorkingDirectory = process.cwd();
+    process.chdir(projectRoot);
+    try {
+      const result = await analyzeProject({ explicitPaths: ["src"] });
+      expect(result.metrics.map((metric) => metric.displayName)).toEqual(["sample"]);
+    } finally {
+      process.chdir(previousWorkingDirectory);
+    }
   });
 });
 

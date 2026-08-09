@@ -97,6 +97,29 @@ describe("source exclusions", () => {
     );
   });
 
+  it("excludes files with generated comment markers and records the audit reason", async () => {
+    const projectRoot = await createTempDir("cognitive-exclusions-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/generated.ts": `// @generated
+export function generated(): number {
+  return 1;
+}
+`,
+      "src/manual.ts": buildSimpleFunction("safe")
+    });
+
+    const result = await analyzeProject({ projectRoot });
+
+    expect(result.metrics.map((metric) => metric.displayName)).toEqual(["safe"]);
+    expect(result.exclusionAudit).toMatchObject({ analyzedFiles: 1, excludedFiles: 1 });
+    expect(result.exclusionAudit.excludedFileReasons).toContainEqual({
+      reason: "default:comment:@generated",
+      count: 1
+    });
+  });
+
   it("applies configured name, decorator, and comment exclusions before threshold evaluation", async () => {
     const projectRoot = await createTempDir("cognitive-exclusions-");
     tempDirs.push(projectRoot);

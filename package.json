@@ -33,7 +33,7 @@
     "verify-release-version": "node ./scripts/verify-release-version.mjs"
   },
   "devDependencies": {
-    "@barney-media/crap-typescript-vitest": "^0.4.1",
+    "@barney-media/crap-typescript-vitest": "^0.5.0",
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.9.1",
     "@vitest/coverage-v8": "^4.1.7",

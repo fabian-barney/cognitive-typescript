@@ -49,7 +49,7 @@ function buildFunctionDeclarationMethod(
   if (!ts.isFunctionDeclaration(node) || !hasFunctionBody(node)) {
     return null;
   }
-  const functionName = node.name?.text ?? inferAnonymousDefaultName(node);
+  const functionName = functionDeclarationName(node);
   if (!functionName) {
     return null;
   }
@@ -59,8 +59,19 @@ function buildFunctionDeclarationMethod(
     checker,
     functionName,
     containerName: findContainerName(node, sourceFile),
-    symbolNodes: node.name ? [node.name] : []
+    symbolNodes: functionDeclarationSymbolNodes(node)
   });
+}
+
+function functionDeclarationName(node: ts.FunctionDeclaration): string | null {
+  if (node.name) {
+    return node.name.text;
+  }
+  return inferAnonymousDefaultName(node);
+}
+
+function functionDeclarationSymbolNodes(node: ts.FunctionDeclaration): ts.Node[] {
+  return node.name ? [node.name] : [];
 }
 
 function buildConstructorMethod(
