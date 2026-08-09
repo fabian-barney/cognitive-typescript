@@ -96,7 +96,7 @@ function collectChangedFile(projectRoot: string, entry: GitStatusEntry, files: S
 
 function collectChangedFilesFromStatus(projectRoot: string, entries: string[]): Set<string> {
   const files = new Set<string>();
-  for (let index = 0; index < entries.length; ) {
+  for (let index = 0; index < entries.length;) {
     index += collectChangedEntry(projectRoot, entries, index, files);
   }
   return files;

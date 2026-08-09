@@ -53,6 +53,8 @@ for (const { file, parsed } of packageEntries) {
 
   const lockCoreRange = lockPackage?.dependencies?.[corePackageName];
   if (lockCoreRange !== expectedCoreRange) {
-    throw new Error(`package-lock.json ${lockPath} has ${corePackageName} ${lockCoreRange}, expected ${expectedCoreRange}`);
+    throw new Error(
+      `package-lock.json ${lockPath} has ${corePackageName} ${lockCoreRange}, expected ${expectedCoreRange}`
+    );
   }
 }
