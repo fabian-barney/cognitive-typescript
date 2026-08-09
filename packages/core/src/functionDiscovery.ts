@@ -378,9 +378,11 @@ function assignedNameFromBinaryExpression(
   node: ts.FunctionExpression | ts.ArrowFunction,
   sourceFile: ts.SourceFile
 ): ReturnType<AssignedFunctionNameResolver> {
-  if (
-    !(ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.EqualsToken && parent.right === node)
-  ) {
+  if (!(
+    ts.isBinaryExpression(parent) &&
+    parent.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+    parent.right === node
+  )) {
     return null;
   }
   const target = assignmentTarget(parent.left, sourceFile);

@@ -275,7 +275,7 @@ function compileGlobPattern(pattern: string): RegExp {
 
 function globToRegexSource(pattern: string): string {
   let source = "";
-  for (let index = 0; index < pattern.length; ) {
+  for (let index = 0; index < pattern.length;) {
     const token = readGlobToken(pattern, index);
     source += token.regexSource;
     index += token.length;
