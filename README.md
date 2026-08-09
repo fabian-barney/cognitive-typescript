@@ -306,7 +306,6 @@ The default release path uses npm Trusted Publishing from `.github/workflows/rel
 - `@barney-media/cognitive-typescript-vitest`
 - `@barney-media/cognitive-typescript-jest`
 
-The earlier `v0.1.0` bootstrap used a one-time `NPM_TOKEN` secret so the public package names could be created. Trusted Publishing is now the default path and does not require that token.
 Release notes can be rendered locally with:
 
 ```bash

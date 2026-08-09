@@ -8,14 +8,20 @@ describe("render-release-notes", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
+    expect(result.stdout.startsWith("### Changed")).toBe(true);
     expect(result.stdout).toContain("Reduced the default Cognitive Complexity threshold from `15` to `8`.");
     expect(result.stdout).not.toContain("Updated vite from 8.0.15 to 8.0.16.");
   });
 });
 
 function renderReleaseNotes(tag: string, githubRefName: string): Promise<ProcessResult> {
+  const isWindows = process.platform === "win32";
+  const command = isWindows ? (process.env.ComSpec ?? "cmd.exe") : "npm";
+  const args = isWindows
+    ? ["/d", "/s", "/c", `npm run --silent render-release-notes -- ${tag}`]
+    : ["run", "--silent", "render-release-notes", "--", tag];
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, ["scripts/render-release-notes.mjs", tag], {
+    const child = spawn(command, args, {
       cwd: process.cwd(),
       env: { ...process.env, GITHUB_REF_NAME: githubRefName },
       stdio: ["ignore", "pipe", "pipe"]
