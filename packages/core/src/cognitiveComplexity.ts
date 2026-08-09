@@ -421,14 +421,16 @@ function unwrapParentheses<T extends ts.Node>(node: T): T {
   return current as T;
 }
 
+const NESTED_FUNCTION_KINDS = new Set<ts.SyntaxKind>([
+  ts.SyntaxKind.FunctionDeclaration,
+  ts.SyntaxKind.FunctionExpression,
+  ts.SyntaxKind.ArrowFunction,
+  ts.SyntaxKind.MethodDeclaration,
+  ts.SyntaxKind.GetAccessor,
+  ts.SyntaxKind.SetAccessor,
+  ts.SyntaxKind.Constructor
+]);
+
 export function isNestedFunctionLike(node: ts.Node): node is NamedFunctionLike {
-  return (
-    ts.isFunctionDeclaration(node) ||
-    ts.isFunctionExpression(node) ||
-    ts.isArrowFunction(node) ||
-    ts.isMethodDeclaration(node) ||
-    ts.isGetAccessorDeclaration(node) ||
-    ts.isSetAccessorDeclaration(node) ||
-    ts.isConstructorDeclaration(node)
-  );
+  return NESTED_FUNCTION_KINDS.has(node.kind);
 }

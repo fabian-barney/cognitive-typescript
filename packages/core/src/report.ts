@@ -124,17 +124,21 @@ interface PreparedFormatRequest {
 
 function prepareFormatRequest(options: FormatAnalysisReportOptions): PreparedFormatRequest {
   const format = options.format;
-  const agent = options.agent ?? false;
-  const omitRedundancy = options.omitRedundancy ?? agent;
+  const agent = optionOr(options.agent, false);
+  const omitRedundancy = optionOr(options.omitRedundancy, agent);
   return {
     format,
-    threshold: validateThreshold(options.threshold ?? COGNITIVE_COMPLEXITY_THRESHOLD),
-    failuresOnly: options.failuresOnly ?? agent,
+    threshold: validateThreshold(optionOr(options.threshold, COGNITIVE_COMPLEXITY_THRESHOLD)),
+    failuresOnly: optionOr(options.failuresOnly, agent),
     omitRedundancy,
     omitMethodStatus: omitRedundancy && format !== "junit",
-    elapsedSeconds: options.elapsedSeconds ?? 0,
+    elapsedSeconds: optionOr(options.elapsedSeconds, 0),
     exclusionAudit: options.includeExclusionAudit === false ? undefined : options.exclusionAudit
   };
+}
+
+function optionOr<T>(value: T | undefined, fallback: T): T {
+  return value ?? fallback;
 }
 
 export function formatReport(metrics: MethodMetrics[]): string {
@@ -445,20 +449,10 @@ function readMethodColumnValue(
   method: MethodReportEntry | CompactMethodReportEntry,
   column: MethodColumn | CompactMethodColumn
 ): ReportValue {
-  switch (column) {
-    case "status":
-      return (method as MethodReportEntry).status;
-    case "cc":
-      return method.cc;
-    case "method":
-      return method.method;
-    case "src":
-      return method.src;
-    case "lineStart":
-      return method.lineStart;
-    case "lineEnd":
-      return method.lineEnd;
+  if (column === "status") {
+    return (method as MethodReportEntry).status;
   }
+  return method[column];
 }
 
 function readIndexedValue<T>(values: readonly T[], index: number): T {
