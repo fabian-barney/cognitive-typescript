@@ -6,9 +6,18 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+- No unreleased changes.
+
+## [0.3.0] - 2026-08-09
+
 ### Changed
 
 - Reduced the default Cognitive Complexity threshold from `15` to `8`.
+
+### Security
+
+- Refreshed npm lockfile resolutions to resolve seven dependency security
+  advisories without changing declared runtime or public API dependencies.
 
 ## [0.2.2] - 2026-06-19
 

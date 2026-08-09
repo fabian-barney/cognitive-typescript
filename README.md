@@ -297,7 +297,7 @@ Cognitive Complexity scoring for `&&`, `||`, `??`, optional chaining, logical as
 
 ## Release
 
-The default release path uses npm Trusted Publishing from `.github/workflows/release.yml`. Tag `v<version>` from `main` after the build workflow is green. The tag-triggered release workflow verifies package versions, renders the GitHub release notes from `CHANGELOG.md`, runs `npm test`, `npm run cognitive-typescript-check`, and `npm run crap-typescript-check`, then publishes the four public npm packages and creates the GitHub release.
+The default release path uses npm Trusted Publishing from `.github/workflows/release.yml`. Tag `v<version>` from `main` after the build workflow is green. The tag-triggered release workflow verifies package versions, renders the GitHub release notes from `CHANGELOG.md`, runs the full validation and quality-gate set, and creates a draft GitHub release before publishing the four public npm packages. The release is promoted from draft only after all package publications and registry checks succeed.
 
 `v0.1.0` was the one-time bootstrap release that used the GitHub repo `NPM_TOKEN` secret together with provenance so the package names could be created on npm. Trusted Publishers are now the default for these packages:
 
@@ -311,13 +311,13 @@ The earlier `v0.1.0` bootstrap used a one-time `NPM_TOKEN` secret so the public 
 Release notes can be rendered locally with:
 
 ```bash
-npm run render-release-notes -- v0.2.1
+npm run render-release-notes -- v0.3.0
 ```
 
 Before tagging a release, also verify the version metadata locally:
 
 ```bash
-npm run verify-release-version -- v0.2.1
+npm run verify-release-version -- v0.3.0
 ```
 
 ## Contributing
