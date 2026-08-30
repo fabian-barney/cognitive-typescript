@@ -309,13 +309,13 @@ The default release path uses npm Trusted Publishing from `.github/workflows/rel
 Release notes can be rendered locally with:
 
 ```bash
-npm run render-release-notes -- v0.3.0
+npm run render-release-notes -- v0.4.0
 ```
 
 Before tagging a release, also verify the version metadata locally:
 
 ```bash
-npm run verify-release-version -- v0.3.0
+npm run verify-release-version -- v0.4.0
 ```
 
 ## Contributing

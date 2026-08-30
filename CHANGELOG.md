@@ -8,6 +8,23 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - No unreleased changes.
 
+## [0.4.0] - 2026-08-30
+
+### Added
+
+- Exposed the shared reporter analysis runner for adapter integrations.
+
+### Changed
+
+- Centralized Jest and Vitest reporter finalization and adopted the upstream CRAP
+  `6.0` default for the repository quality gate.
+- Hardened release-note generation and validation.
+
+### Security
+
+- Updated `fast-xml-parser` to `5.11.1` and pinned `nanoid` to `3.3.18` to
+  resolve dependency advisories.
+
 ## [0.3.0] - 2026-08-09
 
 ### Changed
