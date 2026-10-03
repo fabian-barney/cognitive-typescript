@@ -13,7 +13,7 @@ import {
   versionIncreased,
   waitForRequired
 } from "./release-lib.mjs";
-import { digest, packageBom, verifyManifest } from "./release-artifacts.mjs";
+import { digest, packageBom, verifyManifest, verifyPackedArchive } from "./release-artifacts.mjs";
 import { verifyPublishedPackage } from "./release-registry.mjs";
 
 test("stable versions increase numerically and reject malformed candidates", () => {
@@ -279,6 +279,26 @@ test("SBOM re-rooting retains runtime closure, removes unrelated dev tools, and 
   );
   bom.dependencies[0].dependsOn.push("missing");
   assert.throws(() => packageBom(bom, pkg, [pkg]), /Incomplete SBOM/);
+});
+
+test("packed archives require the exact identity, license, declarations, and executable", () => {
+  const pkg = { name: "@scope/cli", version: "1.0.0", bin: { cli: "dist/bin.js" } };
+  const artifact = {
+    name: pkg.name,
+    version: pkg.version,
+    filename: "scope-cli-1.0.0.tgz",
+    files: ["package.json", "README.md", "LICENSE", "dist/index.js", "dist/index.d.ts", "dist/bin.js"].map((path) => ({
+      path
+    }))
+  };
+  assert.equal(verifyPackedArchive([artifact], pkg, "1.0.0"), artifact);
+  for (const file of artifact.files) {
+    const incomplete = { ...artifact, files: artifact.files.filter((entry) => entry !== file) };
+    assert.throws(() => verifyPackedArchive([incomplete], pkg, "1.0.0"), /missing/);
+  }
+  for (const wrong of [[], [{ ...artifact, filename: "other.tgz" }], [{ ...artifact, version: "0.4.0" }]]) {
+    assert.throws(() => verifyPackedArchive(wrong, pkg, "1.0.0"), /identity/);
+  }
 });
 
 test("checksums reject modified bytes and unsafe paths", () => {

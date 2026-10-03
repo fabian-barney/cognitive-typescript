@@ -1,6 +1,31 @@
 import { jsonRequest } from "./release-lib.mjs";
 import { digest } from "./release-artifacts.mjs";
 
+function integrityMatches(metadata, expected, packageName, representation = "") {
+  const integrity = metadata?.dist?.integrity;
+  if (integrity == null) return false;
+  if (integrity !== expected) throw new Error(`npm ${representation}integrity mismatch: ${packageName}`);
+  return true;
+}
+
+async function hasPublishedProvenance(metadata, request) {
+  const url = metadata.dist.attestations?.url;
+  if (!url) return false;
+  const provenance = await request(url, { allowMissing: true });
+  return provenance?.attestations?.some((entry) => entry.predicateType === "https://slsa.dev/provenance/v1") ?? false;
+}
+
+async function metadataReady(pkg, packageUrl, expected, request) {
+  const metadata = await request(`${packageUrl}/${pkg.version}`, { allowMissing: true });
+  if (!integrityMatches(metadata, expected, pkg.name)) return false;
+  if (!(await hasPublishedProvenance(metadata, request))) return false;
+  const installMetadata = await request(packageUrl, {
+    allowMissing: true,
+    headers: { Accept: "application/vnd.npm.install-v1+json", "Cache-Control": "no-cache" }
+  });
+  return integrityMatches(installMetadata?.versions?.[pkg.version], expected, pkg.name, "install ");
+}
+
 export async function verifyPublishedPackage(
   pkg,
   bytes,
@@ -9,31 +34,9 @@ export async function verifyPublishedPackage(
   const expected = `sha512-${digest(bytes, "sha512", "base64")}`;
   // Match npm's canonical scoped-package URL and its separate install-metadata representation.
   const packageUrl = `https://registry.npmjs.org/${encodeURIComponent(pkg.name).replace(/^%40/, "@").replaceAll("%2F", "%2f")}`;
-  const url = `${packageUrl}/${pkg.version}`;
   for (let attempt = 0; attempt < attempts; attempt++) {
     try {
-      const metadata = await request(url, { allowMissing: true });
-      if (metadata) {
-        const versionIntegrity = metadata.dist?.integrity;
-        if (versionIntegrity != null && versionIntegrity !== expected)
-          throw new Error(`npm integrity mismatch: ${pkg.name}`);
-        if (versionIntegrity === expected && metadata.dist.attestations?.url) {
-          const provenance = await request(metadata.dist.attestations.url, { allowMissing: true });
-          if (provenance?.attestations?.some((entry) => entry.predicateType === "https://slsa.dev/provenance/v1")) {
-            const installMetadata = await request(packageUrl, {
-              allowMissing: true,
-              headers: { Accept: "application/vnd.npm.install-v1+json", "Cache-Control": "no-cache" }
-            });
-            const published = installMetadata?.versions?.[pkg.version];
-            if (published) {
-              const installIntegrity = published.dist?.integrity;
-              if (installIntegrity != null && installIntegrity !== expected)
-                throw new Error(`npm install integrity mismatch: ${pkg.name}`);
-              if (installIntegrity === expected) return;
-            }
-          }
-        }
-      }
+      if (await metadataReady(pkg, packageUrl, expected, request)) return;
     } catch (error) {
       if (error.status !== 429 && !(error.status >= 500 && error.status <= 599)) throw error;
     }

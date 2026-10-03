@@ -56,6 +56,18 @@ export function npm(args, options = {}) {
   });
 }
 
+export function verifyPackedArchive(packed, pkg, version) {
+  const artifact = packed.find((entry) => entry.name === pkg.name);
+  if (artifact?.filename !== archiveName(pkg) || artifact.version !== version)
+    throw new Error("Unexpected archive identity");
+  const files = new Set(artifact.files.map((file) => file.path));
+  const required = ["package.json", "README.md", "LICENSE", "dist/index.js", "dist/index.d.ts"];
+  for (const file of [...required, ...Object.values(pkg.bin ?? {})]) {
+    if (!files.has(file)) throw new Error(`${pkg.name} is missing ${file}`);
+  }
+  return artifact;
+}
+
 export function buildArtifacts(directory = "release-artifacts") {
   if (existsSync(directory) && readdirSync(directory).length) throw new Error("Artifact directory must be empty");
   mkdirSync(directory, { recursive: true });
@@ -66,16 +78,7 @@ export function buildArtifacts(directory = "release-artifacts") {
   if (packed.length !== manifests.length) throw new Error("Unexpected package count");
   const bom = JSON.parse(npm(["sbom", "--package-lock-only", "--sbom-format=cyclonedx"]));
   for (const pkg of manifests) {
-    const artifact = packed.find((entry) => entry.name === pkg.name);
-    if (artifact?.filename !== archiveName(pkg) || artifact.version !== root.version)
-      throw new Error("Unexpected archive identity");
-    const files = new Set(artifact.files.map((file) => file.path));
-    for (const required of ["package.json", "README.md", "LICENSE", "dist/index.js", "dist/index.d.ts"]) {
-      if (!files.has(required)) throw new Error(`${pkg.name} is missing ${required}`);
-    }
-    for (const entry of Object.values(pkg.bin ?? {})) {
-      if (!files.has(entry)) throw new Error(`${pkg.name} is missing executable ${entry}`);
-    }
+    const artifact = verifyPackedArchive(packed, pkg, root.version);
     const sbom = packageBom(structuredClone(bom), pkg, manifests);
     writeFileSync(path.join(directory, `${artifact.filename}.cdx.json`), `${JSON.stringify(sbom, null, 2)}\n`);
   }
