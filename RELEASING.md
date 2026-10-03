@@ -92,13 +92,14 @@ In a clean consumer project, install the exact release versions and run
 
 The workflow verifies the signed artifacts before pushing the annotated tag. It then
 creates a GitHub draft, uploads assets, publishes core/CLI/Vitest/Jest in that order,
-checks npm integrity and provenance, runs a clean registry consumer smoke test, and
+checks npm integrity, provenance, and `latest` tags, runs a clean registry consumer smoke test, and
 promotes the draft only after all checks succeed.
 
 The npm read API can lag successful publication. Verification checks both version details
 and npm's separate install-metadata representation, and the smoke install revalidates its cache.
 Verification retries missing metadata,
-missing provenance, rate limits, and temporary server failures up to 60 times at ten-second
+missing provenance, delayed `latest` tags, rate limits, temporary server failures, and
+transient network failures up to 60 times at ten-second
 intervals per package. Integrity mismatches and permanent permission errors fail immediately.
 
 If all four uploads succeeded but only this read-side propagation check failed, recovery

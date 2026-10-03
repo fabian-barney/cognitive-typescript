@@ -36,9 +36,12 @@ if (command === "prepare") {
   if (git("rev-parse", `${tag}^{commit}`) !== sha) throw new Error("Tag does not match release source");
   await assertUnpublished(manifests);
   for (const pkg of manifests) {
-    npm(["publish", `./release-artifacts/${archiveName(pkg)}`, "--access", "public", "--provenance"], {
-      stdio: "inherit"
-    });
+    npm(
+      ["publish", `./release-artifacts/${archiveName(pkg)}`, "--access", "public", "--tag", "latest", "--provenance"],
+      {
+        stdio: "inherit"
+      }
+    );
   }
 } else if (command === "verify") {
   for (const pkg of manifests) {

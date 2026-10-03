@@ -16,6 +16,11 @@ import {
 import { digest, packageBom, verifyManifest, verifyPackedArchive } from "./release-artifacts.mjs";
 import { verifyPublishedPackage } from "./release-registry.mjs";
 
+const installMetadata = (metadata, latest = "1.0.0") => ({
+  "dist-tags": { latest },
+  versions: { "1.0.0": metadata }
+});
+
 test("stable versions increase numerically and reject malformed candidates", () => {
   assert.equal(versionIncreased("0.5.3", "1.0.0"), true);
   assert.equal(versionIncreased("1.9.0", "1.10.0"), true);
@@ -134,7 +139,7 @@ test("post-publish verification waits for metadata and provenance propagation", 
     { attestations: [] },
     metadata,
     { attestations: [{ predicateType: "https://slsa.dev/provenance/v1" }] },
-    { versions: { "1.0.0": metadata } }
+    installMetadata(metadata)
   ];
   let pauses = 0;
   await verifyPublishedPackage(pkg, "archive", {
@@ -160,7 +165,7 @@ test("verification waits for npm install metadata and uses its canonical scoped 
       if (url.endsWith("/1.0.0")) return metadata;
       assert.equal(url, "https://registry.npmjs.org/@scope%2fcore");
       assert.equal(options.headers.Accept, "application/vnd.npm.install-v1+json");
-      return ++installReads === 1 ? { versions: {} } : { versions: { "1.0.0": metadata } };
+      return ++installReads === 1 ? { versions: {} } : installMetadata(metadata);
     }
   });
   assert.equal(installReads, 2);
@@ -228,7 +233,7 @@ test("partial version and install metadata wait for integrity without accepting 
         request: async (url) => {
           if (url === "attestations") return { attestations: [{ predicateType: "https://slsa.dev/provenance/v1" }] };
           if (url.endsWith("/1.0.0")) return endpoint === "version" && ++reads === 1 ? incomplete : metadata;
-          return { versions: { "1.0.0": endpoint === "install" && ++reads === 1 ? incomplete : metadata } };
+          return installMetadata(endpoint === "install" && ++reads === 1 ? incomplete : metadata);
         }
       });
       assert.equal(reads, 2);
@@ -256,6 +261,70 @@ test("partial version and install metadata wait for integrity without accepting 
       }
     }),
     /install integrity mismatch/
+  );
+});
+
+test("temporary network failures retry without hiding programming errors", async () => {
+  const pkg = { name: "core", version: "1.0.0" };
+  for (const error of [
+    Object.assign(new Error("Timeout"), { name: "TimeoutError" }),
+    new TypeError("fetch failed", { cause: { code: "ECONNRESET" } }),
+    new TypeError("fetch failed", { cause: { code: "UND_ERR_CONNECT_TIMEOUT" } })
+  ]) {
+    let calls = 0;
+    let pauses = 0;
+    await assert.rejects(
+      verifyPublishedPackage(pkg, "archive", {
+        attempts: 2,
+        request: async () => {
+          calls++;
+          throw error;
+        },
+        pause: async () => {
+          pauses++;
+        }
+      }),
+      /Timed out/
+    );
+    assert.equal(calls, 2);
+    assert.equal(pauses, 1);
+  }
+  let calls = 0;
+  await assert.rejects(
+    verifyPublishedPackage(pkg, "archive", {
+      request: async () => {
+        calls++;
+        throw new TypeError("Invalid configuration");
+      }
+    }),
+    /Invalid configuration/
+  );
+  assert.equal(calls, 1);
+});
+
+test("registry verification waits for latest and fails if it never reaches the release", async () => {
+  const pkg = { name: "core", version: "1.0.0" };
+  const metadata = {
+    dist: { integrity: `sha512-${digest("archive", "sha512", "base64")}`, attestations: { url: "attestations" } }
+  };
+  let reads = 0;
+  const request = async (url) => {
+    if (url === "attestations") return { attestations: [{ predicateType: "https://slsa.dev/provenance/v1" }] };
+    if (url.endsWith("/1.0.0")) return metadata;
+    return installMetadata(metadata, ++reads === 1 ? "0.4.0" : "1.0.0");
+  };
+  await verifyPublishedPackage(pkg, "archive", { request, pause: async () => {} });
+  assert.equal(reads, 2);
+  await assert.rejects(
+    verifyPublishedPackage(pkg, "archive", {
+      attempts: 2,
+      pause: async () => {},
+      request: async (url) => {
+        if (url === "attestations") return { attestations: [{ predicateType: "https://slsa.dev/provenance/v1" }] };
+        return url.endsWith("/1.0.0") ? metadata : installMetadata(metadata, "0.4.0");
+      }
+    }),
+    /Timed out/
   );
 });
 

@@ -1,6 +1,28 @@
 import { jsonRequest } from "./release-lib.mjs";
 import { digest } from "./release-artifacts.mjs";
 
+const temporaryNetworkCodes = new Set([
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "ETIMEDOUT",
+  "EAI_AGAIN",
+  "ENETUNREACH",
+  "EHOSTUNREACH",
+  "UND_ERR_CONNECT_TIMEOUT",
+  "UND_ERR_HEADERS_TIMEOUT",
+  "UND_ERR_BODY_TIMEOUT",
+  "UND_ERR_SOCKET"
+]);
+
+function temporaryRegistryFailure(error) {
+  return (
+    error.status === 429 ||
+    (error.status >= 500 && error.status <= 599) ||
+    error.name === "TimeoutError" ||
+    (error instanceof TypeError && temporaryNetworkCodes.has(error.cause?.code))
+  );
+}
+
 function integrityMatches(metadata, expected, packageName, representation = "") {
   const integrity = metadata?.dist?.integrity;
   if (integrity == null) return false;
@@ -23,7 +45,8 @@ async function metadataReady(pkg, packageUrl, expected, request) {
     allowMissing: true,
     headers: { Accept: "application/vnd.npm.install-v1+json", "Cache-Control": "no-cache" }
   });
-  return integrityMatches(installMetadata?.versions?.[pkg.version], expected, pkg.name, "install ");
+  if (!integrityMatches(installMetadata?.versions?.[pkg.version], expected, pkg.name, "install ")) return false;
+  return installMetadata["dist-tags"]?.latest === pkg.version;
 }
 
 export async function verifyPublishedPackage(
@@ -38,7 +61,7 @@ export async function verifyPublishedPackage(
     try {
       if (await metadataReady(pkg, packageUrl, expected, request)) return;
     } catch (error) {
-      if (error.status !== 429 && !(error.status >= 500 && error.status <= 599)) throw error;
+      if (!temporaryRegistryFailure(error)) throw error;
     }
     if (attempt + 1 < attempts) await pause();
   }
