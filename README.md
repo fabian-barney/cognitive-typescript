@@ -295,29 +295,18 @@ Verified and unverified syntax shapes are tracked in [docs/compatibility-matrix.
 
 Cognitive Complexity scoring for `&&`, `||`, `??`, optional chaining, logical assignment, and JSX short-circuit rendering is documented in [docs/operator-semantics.md](docs/operator-semantics.md).
 
-## Release
+## Releases
 
-The default release path uses npm Trusted Publishing from `.github/workflows/release.yml`. Tag `v<version>` from `main` after the build workflow is green. The tag-triggered release workflow verifies package versions, renders the GitHub release notes from `CHANGELOG.md`, runs the full validation and quality-gate set, and creates a draft GitHub release before publishing the four public npm packages. The release is promoted from draft only after all package publications and registry checks succeed.
+A reviewed version-bump PR merged into protected `main` publishes all four packages automatically.
+Ordinary merges are a successful no-op. Releases include the exact npm archives, four CycloneDX SBOMs,
+SHA-256 checksums, and keyless Sigstore provenance and SBOM attestation bundles.
 
-`v0.1.0` was the one-time bootstrap release that used the GitHub repo `NPM_TOKEN` secret together with provenance so the package names could be created on npm. Trusted Publishers are now the default for these packages:
+Publishing retains the existing npm Trusted Publisher identity: `fabian-barney/cognitive-typescript`,
+workflow `release.yml`, with no publishing environment or token. Git tags are unsigned annotated tags;
+artifact signatures bind the released bytes to the source commit and GitHub workflow.
 
-- `@barney-media/cognitive-typescript-core`
-- `@barney-media/cognitive-typescript`
-- `@barney-media/cognitive-typescript-vitest`
-- `@barney-media/cognitive-typescript-jest`
-
-Release notes can be rendered locally with:
-
-```bash
-npm run render-release-notes -- v0.4.0
-```
-
-Before tagging a release, also verify the version metadata locally:
-
-```bash
-npm run verify-release-version -- v0.4.0
-```
+See [RELEASING.md](RELEASING.md) for preparation, consumer verification commands, and failure recovery.
 
 ## Contributing
 
-See `CONTRIBUTING.md` for the issue-linked branch, commit, and pull-request flow used in this repository.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the issue-linked branch, commit, and pull-request flow.

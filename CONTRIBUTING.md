@@ -33,11 +33,15 @@ CI expectations for pull requests:
 - `npm run cognitive-typescript-check` is the repository self-gate for the published package sources.
 - `npm run crap-typescript-check` is the sibling CRAP gate for the same published package sources.
 
-Before tagging a release, also run:
+Before merging a release version bump, also run:
 
 ```bash
 npm run verify-release-version -- v0.4.0
+npm run test:release
+npm run release:artifacts
+npm run release:smoke
 ```
 
-The release workflow also renders the GitHub release notes from `CHANGELOG.md`, so unreleased notes need to be kept current before tagging.
-
+The release workflow renders GitHub release notes from the dated `CHANGELOG.md` section.
+A reviewed version-bump merge starts publication automatically; ordinary merges are a no-op.
+See [RELEASING.md](RELEASING.md) for release preparation, artifact verification, and failure recovery.
