@@ -10,17 +10,37 @@ permissions:
 
 jobs:
   build:
-    name: build
-    runs-on: ubuntu-latest
+    name: build / build-${{ matrix.os }}-${{ matrix.node }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            runner: windows-latest
+            node: node22
+            node-version: "22.13.0"
+          - os: windows
+            runner: windows-latest
+            node: node24
+            node-version: "24.0.0"
+          - os: ubuntu
+            runner: ubuntu-latest
+            node: node22
+            node-version: "22.13.0"
+          - os: ubuntu
+            runner: ubuntu-latest
+            node: node24
+            node-version: "24.0.0"
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Set up Node 24.0.0
-        uses: actions/setup-node@v6
+      - name: Set up Node ${{ matrix.node-version }}
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: "24.0.0"
+          node-version: ${{ matrix.node-version }}
           cache: npm
 
       - name: Set up npm 11.15.0
@@ -33,19 +53,39 @@ jobs:
         run: npm run build
 
   test-unit:
-    name: test / unit
-    runs-on: ubuntu-latest
+    name: test / test-unit-${{ matrix.os }}-${{ matrix.node }}
     needs:
       - build
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            runner: windows-latest
+            node: node22
+            node-version: "22.13.0"
+          - os: windows
+            runner: windows-latest
+            node: node24
+            node-version: "24.0.0"
+          - os: ubuntu
+            runner: ubuntu-latest
+            node: node22
+            node-version: "22.13.0"
+          - os: ubuntu
+            runner: ubuntu-latest
+            node: node24
+            node-version: "24.0.0"
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Set up Node 24.0.0
-        uses: actions/setup-node@v6
+      - name: Set up Node ${{ matrix.node-version }}
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: "24.0.0"
+          node-version: ${{ matrix.node-version }}
           cache: npm
 
       - name: Set up npm 11.15.0
@@ -58,30 +98,58 @@ jobs:
         run: npm run build
 
       - name: Run unit tests
-        run: npm test
+        run: |
+          npm test
+          npm run test:release
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: coverage
+          name: coverage-${{ matrix.runner }}-${{ matrix.node-version }}
           path: coverage
           if-no-files-found: error
 
-  package:
-    name: package
+  lint:
+    name: verify / lint
     runs-on: ubuntu-latest
     needs:
-      - build
+      - workspace-packages
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Node 24.0.0
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.0.0
+          cache: npm
+
+      - name: Set up npm 11.15.0
+        run: npm install --global npm@11.15.0
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: |
+          npm run lint
+          npm run format:check
+
+  workspace-packages:
+    name: package / workspace-packages
+    runs-on: ubuntu-latest
+    needs:
       - test-unit
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Node 24.0.0
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: "24.0.0"
+          node-version: 24.0.0
           cache: npm
 
       - name: Set up npm 11.15.0
@@ -94,23 +162,25 @@ jobs:
         run: npm run build
 
       - name: Verify workspace packages
-        run: npm pack --workspaces
+        run: |
+          npm run test:release
+          npm run release:artifacts
+          npm run release:smoke
 
-  quality-crap-cognitive-typescript:
-    name: verify / quality-crap-cognitive-typescript
+  quality-crap:
+    name: verify / quality-crap
     runs-on: ubuntu-latest
     needs:
-      - build
-      - test-unit
+      - workspace-packages
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Node 24.0.0
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: "24.0.0"
+          node-version: 24.0.0
           cache: npm
 
       - name: Set up npm 11.15.0
@@ -123,29 +193,28 @@ jobs:
         run: npm run build
 
       - name: Download coverage
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: coverage
+          name: coverage-ubuntu-latest-24.0.0
           path: coverage
 
       - name: Run crap-typescript gate
         run: npm run crap-typescript-check
 
-  quality-cognitive-cognitive-typescript:
-    name: verify / quality-cognitive-cognitive-typescript
+  quality-cognitive:
+    name: verify / quality-cognitive
     runs-on: ubuntu-latest
     needs:
-      - build
-      - test-unit
+      - workspace-packages
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Node 24.0.0
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: "24.0.0"
+          node-version: 24.0.0
           cache: npm
 
       - name: Set up npm 11.15.0
@@ -160,3 +229,14 @@ jobs:
       - name: Run cognitive-typescript gate
         run: npm run cognitive-typescript-check
 
+  required:
+    name: verify / required
+    if: always()
+    needs: [build, test-unit, lint, workspace-packages, quality-crap, quality-cognitive]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all gates to succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node -e 'const jobs=JSON.parse(process.env.RESULTS); if(Object.values(jobs).some(job=>job.result!=="success")) process.exit(1)'

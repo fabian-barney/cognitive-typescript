@@ -36,7 +36,11 @@
     "test": "vitest run --coverage.enabled true",
     "pack": "npm pack --workspaces",
     "render-release-notes": "node ./scripts/render-release-notes.mjs",
-    "verify-release-version": "node ./scripts/verify-release-version.mjs"
+    "verify-release-version": "node ./scripts/verify-release-version.mjs",
+    "test:release": "node --test scripts/release-controls.test.mjs",
+    "release:artifacts": "node scripts/release-artifacts.mjs",
+    "release:smoke": "node scripts/release-smoke.mjs",
+    "release:publish": "node scripts/release-publish.mjs"
   },
   "devDependencies": {
     "@barney-media/crap-typescript-vitest": "^0.5.0",
