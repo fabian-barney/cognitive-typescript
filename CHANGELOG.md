@@ -6,10 +6,28 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-03
+
+### Added
+
+- Published checksums, per-package CycloneDX SBOMs, and keyless build and SBOM
+  attestations alongside the four npm archives, with npm provenance.
+- Documented consumer verification and recovery using the original release artifacts.
+
+### Changed
+
+- Released the core, CLI, Vitest, and Jest packages as an aligned stable 1.0.0 set.
+- Automated publication from reviewed version-bump merges after exact-commit CI,
+  restoring the Ubuntu/Windows build and test matrix and required quality gates.
+- Preserved the public APIs, CLI behavior, report formats, default Cognitive
+  Complexity threshold of 8, and Node.js requirement of at least 22.13.0.
+
 ### Security
 
 - Pinned transitive `@toon-format/toon` to `2.3.1` to resolve the high-severity
   dependency advisory while awaiting a compatible published `crap-typescript` release.
+- Updated locked js-yaml, Vitest and its coverage provider, and brace-expansion
+  dependencies through reviewed Dependabot changes.
 
 ## [0.4.0] - 2026-08-30
 
