@@ -108,6 +108,19 @@ test("public version or registry failure prevents publication", async () => {
   );
 });
 
+test("publication collision checks use npm's canonical scoped-package URL", async () => {
+  const manifests = [{ name: "@scope/core", version: "1.0.0" }];
+  const requested = [];
+  await assert.rejects(
+    assertUnpublished(manifests, async (url) => {
+      requested.push(url);
+      return { version: "1.0.0" };
+    }),
+    /already public/
+  );
+  assert.deepEqual(requested, ["https://registry.npmjs.org/@scope%2fcore/1.0.0"]);
+});
+
 test("existing tags, drafts, and API failures fail closed", async () => {
   await assertNoReleaseCollision("v1.0.0", async () => null);
   await assert.rejects(

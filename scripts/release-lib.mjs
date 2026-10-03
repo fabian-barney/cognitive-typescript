@@ -6,6 +6,8 @@ export const readJson = (file) => JSON.parse(readFileSync(file, "utf8"));
 export const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
 export const packages = () => workspaces.map((folder) => ({ folder, ...readJson(`packages/${folder}/package.json`) }));
 export const archiveName = (pkg) => `${pkg.name.replace(/^@/, "").replaceAll("/", "-")}-${pkg.version}.tgz`;
+export const npmPackageUrl = (name) =>
+  `https://registry.npmjs.org/${encodeURIComponent(name).replace(/^%40/, "@").replaceAll("%2F", "%2f")}`;
 
 export function stableVersion(version) {
   if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version) || version.trim() !== version) {
@@ -85,7 +87,7 @@ export const github = (endpoint, options = {}) =>
 
 export async function assertUnpublished(manifests, request = jsonRequest) {
   for (const pkg of manifests) {
-    const existing = await request(`https://registry.npmjs.org/${encodeURIComponent(pkg.name)}/${pkg.version}`, {
+    const existing = await request(`${npmPackageUrl(pkg.name)}/${pkg.version}`, {
       allowMissing: true
     });
     if (existing !== null)

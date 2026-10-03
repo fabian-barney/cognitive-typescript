@@ -1,4 +1,4 @@
-import { jsonRequest } from "./release-lib.mjs";
+import { jsonRequest, npmPackageUrl } from "./release-lib.mjs";
 import { digest } from "./release-artifacts.mjs";
 
 const temporaryNetworkCodes = new Set([
@@ -56,7 +56,7 @@ export async function verifyPublishedPackage(
 ) {
   const expected = `sha512-${digest(bytes, "sha512", "base64")}`;
   // Match npm's canonical scoped-package URL and its separate install-metadata representation.
-  const packageUrl = `https://registry.npmjs.org/${encodeURIComponent(pkg.name).replace(/^%40/, "@").replaceAll("%2F", "%2f")}`;
+  const packageUrl = npmPackageUrl(pkg.name);
   for (let attempt = 0; attempt < attempts; attempt++) {
     try {
       if (await metadataReady(pkg, packageUrl, expected, request)) return;
