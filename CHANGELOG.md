@@ -6,6 +6,25 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- Full Node 22/24/26 build, test, and packaged-consumer coverage on Windows, macOS, and Linux,
+  with separate verification of the preserved published runtime minimums.
+- Vitest 5 adapter support alongside Vitest 4, including real consumer checks with coverage enabled/disabled.
+
+### Changed
+
+- Update the private toolchain to npm 12.2.1 and current patched Node runtimes, Node 22 definitions,
+  Vitest/coverage 5.0.5, Vite 8.3.5, CRAP gate 2.0.0, and setup-node 7.1.0.
+- Preserve npm 12 SBOM identities and runtime/peer closures, pack-result compatibility, archive verification,
+  and trusted-publishing controls. Remove obsolete TOON and nanoid overrides.
+- Retain TypeScript 6.0.3 pending #90 and preserve public scoring, report serialization, thresholds, and exit codes.
+
+### Fixed
+
+- Resolve core source imports consistently in unit tests to avoid ambiguous source/compiled coverage identities.
+  Add branch regressions for empty property names and omitted loop clauses without weakening quality gates.
+
 ## [1.0.0] - 2026-10-03
 
 ### Added

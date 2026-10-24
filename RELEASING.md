@@ -37,7 +37,7 @@ before merging a release bump. The successful v0.4.0 runs used this workflow and
 generated npm provenance for all four packages. A workflow rename or environment
 change requires updating all four trusted-publisher configurations first.
 
-Publication uses GitHub OIDC with npm 11.21.1. There is no npm publishing token or
+Publication uses GitHub OIDC with Node 24.22.1 and npm 12.2.1. There is no npm publishing token or
 GPG private key. Only the publication job receives contents, attestations, and
 OIDC write permissions. Third-party Actions are pinned to full commit hashes.
 The `v*` ruleset prevents tag updates and deletion without bypass actors.
@@ -59,6 +59,16 @@ TypeScript remains included because core requires it at runtime, even though the
 repository also uses it for development. Consumer installations may resolve different
 versions within the published dependency ranges. SBOMs do not promise identical
 dependency resolution for all consumers.
+
+npm 12 identifies workspace and aliased components by package metadata. Per-package SBOMs retain
+the generator's actual references and package URLs, reject duplicate or incomplete graphs, and exclude
+unrelated development tools. Package generation accepts npm's keyed workspace pack output while
+retaining exact archive identity and required-file checks.
+
+`npm run release:smoke -- --artifacts-dir PATH` verifies fresh local archives without replacing an
+existing output directory. The harness executes consumer-installed Vitest 4/5 and Jest; after publication,
+the existing `--registry` mode verifies the exact release versions and registry signatures.
+See [the dependency baseline](docs/dependency-baseline.md) for runtime, peer, and license obligations.
 
 Git tags are annotated but unsigned. Keyless Sigstore attestations bind artifact
 digests to the source commit and the GitHub-hosted workflow identity. npm additionally

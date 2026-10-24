@@ -12,6 +12,18 @@ afterEach(async () => {
 });
 
 describe("Cognitive Complexity operator semantics", () => {
+  it("scores a loop with absent condition, initializer, and incrementor", async () => {
+    const methods = await parseSource(`
+export function loopUntilExit(flag: boolean): void {
+  for (;;) {
+    if (flag) break;
+  }
+}
+`);
+
+    expect(toComplexityMap(methods)).toEqual({ loopUntilExit: 3 });
+  });
+
   it("counts logical && and || by operator transition", async () => {
     const methods = await parseSource(`
 export function andRun(a: boolean, b: boolean, c: boolean, d: boolean): boolean {

@@ -30,6 +30,8 @@ const TEST_FILES = [
 export default tseslint.config(
   {
     ignores: [
+      ".claude/**",
+      ".temp/**",
       "**/coverage/**",
       "**/dist/**",
       "**/node_modules/**",

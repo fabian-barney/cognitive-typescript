@@ -8,6 +8,10 @@ Jest adapter for `cognitive-typescript`. It runs Cognitive Complexity analysis a
 npm install --save-dev @barney-media/cognitive-typescript-jest jest
 ```
 
+Supports Jest 30 on maintained/scheduled-LTS Node 22/24/26 across Windows, macOS, and Linux.
+The package installation floor remains Node 22.13.0. Configure any TypeScript test transformer in the
+consumer project; analysis itself does not require test coverage.
+
 ## Setup
 
 ```js

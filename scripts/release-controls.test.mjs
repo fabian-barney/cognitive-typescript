@@ -13,7 +13,7 @@ import {
   versionIncreased,
   waitForRequired
 } from "./release-lib.mjs";
-import { digest, packageBom, verifyManifest, verifyPackedArchive } from "./release-artifacts.mjs";
+import { digest, normalizePackResult, packageBom, verifyManifest, verifyPackedArchive } from "./release-artifacts.mjs";
 import { verifyPublishedPackage } from "./release-registry.mjs";
 
 const installMetadata = (metadata, latest = "1.0.0") => ({
@@ -345,7 +345,11 @@ test("SBOM re-rooting retains runtime closure, removes unrelated dev tools, and 
   const component = (ref) => ({ name: ref, "bom-ref": ref });
   const bom = {
     metadata: { component: component("parent") },
-    components: [component("cli@1.0.0"), component("typescript"), component("dev-tool")],
+    components: [
+      { ...component("cli@1.0.0"), name: "cli", version: "1.0.0" },
+      component("typescript"),
+      component("dev-tool")
+    ],
     dependencies: [
       { ref: "cli@1.0.0", dependsOn: ["typescript"] },
       { ref: "typescript", dependsOn: [] },
@@ -353,14 +357,63 @@ test("SBOM re-rooting retains runtime closure, removes unrelated dev tools, and 
     ]
   };
   const pkg = { name: "cli", version: "1.0.0" };
-  const result = packageBom(bom, pkg, [pkg]);
+  const result = packageBom(bom, pkg);
   assert.equal(result.metadata.component.name, "cli");
   assert.deepEqual(
     result.components.map((entry) => entry.name),
     ["typescript"]
   );
   bom.dependencies[0].dependsOn.push("missing");
-  assert.throws(() => packageBom(bom, pkg, [pkg]), /Incomplete SBOM/);
+  assert.throws(() => packageBom(bom, pkg), /Incomplete SBOM/);
+});
+
+test("npm 12 SBOM identities preserve scoped roots, aliases, peers, and cycles", () => {
+  const pkg = { name: "@scope/cli", version: "1.0.0" };
+  const rootRef = "pkg:npm/%40scope/cli@1.0.0";
+  const aliasRef = "pkg:npm/actual-package@2.0.0?alias=consumer-alias";
+  const bom = {
+    metadata: { component: { name: "private-parent" } },
+    components: [
+      { ...pkg, "bom-ref": rootRef, purl: rootRef },
+      { name: "actual-package", version: "2.0.0", "bom-ref": aliasRef, purl: aliasRef },
+      { name: "runner-peer", version: "5.0.5", "bom-ref": "peer" },
+      { name: "unrelated-dev-tool", "bom-ref": "dev" }
+    ],
+    dependencies: [
+      { ref: rootRef, dependsOn: [aliasRef, "peer"] },
+      { ref: aliasRef, dependsOn: [rootRef] },
+      { ref: "peer", dependsOn: [] },
+      { ref: "dev", dependsOn: [] }
+    ]
+  };
+  const before = structuredClone(bom);
+  const result = packageBom(bom, pkg);
+  assert.equal(result.metadata.component["bom-ref"], rootRef);
+  assert.equal(result.metadata.component.purl, rootRef);
+  assert.deepEqual(result.components, bom.components.slice(1, 3));
+  assert.deepEqual(result.dependencies, bom.dependencies.slice(0, 3));
+  assert.deepEqual(bom, before);
+  for (const duplicate of ["components", "dependencies"]) {
+    const invalid = structuredClone(bom);
+    invalid[duplicate].push(structuredClone(invalid[duplicate][1]));
+    assert.throws(() => packageBom(invalid, pkg), /Duplicate SBOM/);
+  }
+  const ambiguous = structuredClone(bom);
+  ambiguous.components.push({ ...pkg, "bom-ref": "other-root" });
+  assert.throws(() => packageBom(ambiguous, pkg), /Expected one SBOM component/);
+  assert.throws(() => packageBom(bom, { ...pkg, version: "9.0.0" }), /Expected one SBOM component/);
+  const missingEdge = structuredClone(bom);
+  missingEdge.dependencies = missingEdge.dependencies.filter((entry) => entry.ref !== "peer");
+  assert.throws(() => packageBom(missingEdge, pkg), /Incomplete SBOM/);
+});
+
+test("npm pack accepts array and keyed workspace results without duplicate identities", () => {
+  const archive = { name: "@scope/cli", version: "1.0.0", filename: "scope-cli-1.0.0.tgz" };
+  assert.deepEqual(normalizePackResult([archive]), [archive]);
+  assert.deepEqual(normalizePackResult({ [archive.name]: archive }), [archive]);
+  for (const invalid of [null, "archive", 1, [{ filename: "unknown.tgz" }], [archive, { ...archive }]]) {
+    assert.throws(() => normalizePackResult(invalid), /npm pack/);
+  }
 });
 
 test("packed archives require the exact identity, license, declarations, and executable", () => {

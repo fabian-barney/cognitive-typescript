@@ -13,6 +13,35 @@ afterEach(async () => {
 });
 
 describe("parseFileMethods", () => {
+  it("preserves empty property names with and without an enclosing container", async () => {
+    const projectRoot = await createTempDir("cognitive-parser-");
+    tempDirs.push(projectRoot);
+    const filePath = path.join(projectRoot, "sample.ts");
+    await writeProjectFiles(projectRoot, {
+      "sample.ts": `export class Box {
+  ""(flag: boolean): number {
+    if (flag) return 1;
+    return 0;
+  }
+}
+export default {
+  ""(flag: boolean): number {
+    if (flag) return 1;
+    return 0;
+  }
+};
+`
+    });
+
+    const methods = await parseFileMethods(filePath);
+
+    expect(methods.map((method) => [method.functionName, method.containerName, method.displayName])).toEqual([
+      ["", "Box", "Box"],
+      ["", null, ""]
+    ]);
+    expect(methods.map((method) => method.cognitiveComplexity)).toEqual([1, 1]);
+  });
+
   it("captures constructors, accessors, computed names, and default exports", async () => {
     const projectRoot = await createTempDir("cognitive-parser-");
     tempDirs.push(projectRoot);

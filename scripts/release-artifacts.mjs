@@ -8,10 +8,15 @@ import { archiveName, packages, readJson, validateVersions } from "./release-lib
 export const digest = (bytes, algorithm = "sha256", encoding = "hex") =>
   createHash(algorithm).update(bytes).digest(encoding);
 
-export function packageBom(bom, pkg, manifests) {
-  const rootRef = `${pkg.name}@${pkg.version}`;
+export function packageBom(bom, pkg) {
+  const roots = bom.components.filter((component) => component.name === pkg.name && component.version === pkg.version);
+  if (roots.length !== 1) throw new Error(`Expected one SBOM component for ${pkg.name}@${pkg.version}`);
+  const rootRef = roots[0]["bom-ref"];
   const components = new Map(bom.components.map((component) => [component["bom-ref"], component]));
   const edges = new Map(bom.dependencies.map((dependency) => [dependency.ref, dependency]));
+  if (components.size !== bom.components.length || edges.size !== bom.dependencies.length) {
+    throw new Error("Duplicate SBOM graph reference");
+  }
   const reachable = new Set();
   const visit = (ref) => {
     if (reachable.has(ref)) return;
@@ -20,12 +25,7 @@ export function packageBom(bom, pkg, manifests) {
     for (const dependency of edges.get(ref).dependsOn ?? []) visit(dependency);
   };
   visit(rootRef);
-  for (const manifest of manifests) {
-    const component = components.get(`${manifest.name}@${manifest.version}`);
-    if (component) component.name = manifest.name;
-  }
-  // npm's workspace SBOM has a private parent and folder names. Re-root the
-  // graph at the published workspace and retain only its runtime/peer closure.
+  // Preserve npm's actual references/purls and retain only this package's runtime/peer closure.
   return {
     ...bom,
     metadata: { ...bom.metadata, component: components.get(rootRef) },
@@ -68,18 +68,30 @@ export function verifyPackedArchive(packed, pkg, version) {
   return artifact;
 }
 
+export function normalizePackResult(value) {
+  if (!value || typeof value !== "object") throw new Error("Unexpected npm pack result");
+  const entries = Object.values(value);
+  const names = entries.map((entry) => entry?.name);
+  if (names.some((name) => typeof name !== "string") || new Set(names).size !== names.length) {
+    throw new Error("Invalid or duplicate npm pack package identity");
+  }
+  return entries;
+}
+
 export function buildArtifacts(directory = "release-artifacts") {
   if (existsSync(directory) && readdirSync(directory).length) throw new Error("Artifact directory must be empty");
   mkdirSync(directory, { recursive: true });
   const root = readJson("package.json");
   const manifests = packages();
   validateVersions(root.version, root, manifests, readJson("package-lock.json"));
-  const packed = JSON.parse(npm(["pack", "--workspaces", "--json", "--pack-destination", directory]));
+  const packed = normalizePackResult(
+    JSON.parse(npm(["pack", "--workspaces", "--json", "--pack-destination", directory]))
+  );
   if (packed.length !== manifests.length) throw new Error("Unexpected package count");
   const bom = JSON.parse(npm(["sbom", "--package-lock-only", "--sbom-format=cyclonedx"]));
   for (const pkg of manifests) {
     const artifact = verifyPackedArchive(packed, pkg, root.version);
-    const sbom = packageBom(structuredClone(bom), pkg, manifests);
+    const sbom = packageBom(structuredClone(bom), pkg);
     writeFileSync(path.join(directory, `${artifact.filename}.cdx.json`), `${JSON.stringify(sbom, null, 2)}\n`);
   }
   const sums = readdirSync(directory)

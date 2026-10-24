@@ -22,6 +22,30 @@ afterEach(async () => {
 });
 
 describe("CognitiveTypescriptVitestReporter", () => {
+  it("publishes once when completion and coverage callbacks overlap or repeat", async () => {
+    const projectRoot = await createProject({
+      "src/sample.ts": buildSimpleFunction("safe")
+    });
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CognitiveTypescriptVitestReporter({
+      projectRoot,
+      paths: ["src"],
+      format: "json",
+      junit: false,
+      stdout,
+      stderr
+    });
+
+    await Promise.all([reporter.onTestRunEnd(), reporter.onFinishedReportCoverage(), reporter.onTestRunEnd()]);
+    await reporter.onFinishedReportCoverage();
+
+    const report = JSON.parse(stdout.toString()) as { methods: Array<{ method: string }> };
+    expect(report.methods.map((entry) => entry.method)).toEqual(["safe"]);
+    expect(stderr.toString()).toBe("");
+    expect(existsSync(path.join(projectRoot, DEFAULT_JUNIT_REPORT))).toBe(false);
+  });
+
   it("prints the no-files message when no analyzable source files are selected", async () => {
     const projectRoot = await createTempDir("cognitive-vitest-reporter-");
     tempDirs.push(projectRoot);
