@@ -5,8 +5,13 @@ Vitest adapter for `cognitive-typescript`. It runs Cognitive Complexity analysis
 ## Install
 
 ```bash
-npm install --save-dev @barney-media/cognitive-typescript-vitest vitest
+npm install --save-dev @barney-media/cognitive-typescript-vitest vitest vite
 ```
+
+Supports Vitest 4 and 5 on maintained/scheduled-LTS Node 22/24/26 across Windows, macOS, and Linux.
+The package installation floor remains Node 22.13.0. Install the runner and its required Vite peer in
+the consumer project. Coverage is optional; if enabled, install `@vitest/coverage-v8` at the exact
+same version as Vitest. Cognitive Complexity analysis also runs when coverage is disabled.
 
 ## Setup
 

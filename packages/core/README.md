@@ -2,6 +2,10 @@
 
 Core analysis engine for computing Cognitive Complexity on TypeScript projects.
 
+Supports maintained/scheduled-LTS Node 22/24/26 on Windows, macOS, and Linux, with a published
+installation floor of Node 22.13.0. The internal compiler remains TypeScript 6 pending the separate
+[TypeScript 7 investigation](https://github.com/fabian-barney/cognitive-typescript/issues/90).
+
 ## Install
 
 ```bash

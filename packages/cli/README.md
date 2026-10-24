@@ -2,6 +2,9 @@
 
 CLI for Cognitive Complexity analysis in TypeScript projects.
 
+Supports maintained/scheduled-LTS Node 22/24/26 on Windows, macOS, and Linux.
+The published installation floor remains Node 22.13.0.
+
 ## Install
 
 ```bash
