@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-27
+
 ### Added
 
 - Full Node 22/24/26 build, test, and packaged-consumer coverage on Windows, macOS, and Linux,
@@ -14,6 +16,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
+- Update compatible runtime and development dependency ranges and lockfile resolutions since v1.0.0.
 - Update the private toolchain to npm 12.2.1 and current patched Node runtimes, Node 22 definitions,
   Vitest/coverage 5.0.5, Vite 8.3.5, CRAP gate 2.0.0, and setup-node 7.1.0.
 - Preserve npm 12 SBOM identities and runtime/peer closures, pack-result compatibility, archive verification,

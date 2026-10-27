@@ -76,12 +76,12 @@ publishes its own signed provenance. No GPG signature files are produced.
 
 ## Verify a download
 
-Download release assets with `gh release download v1.0.0 --repo fabian-barney/cognitive-typescript`.
+Download release assets with `gh release download v1.1.0 --repo fabian-barney/cognitive-typescript`.
 In the download directory, verify checksums with `sha256sum --check SHA256SUMS`.
 Then verify every archive, SBOM, and the checksum manifest against the provenance bundle:
 
 ```sh
-gh attestation verify barney-media-cognitive-typescript-core-1.0.0.tgz \
+gh attestation verify barney-media-cognitive-typescript-core-1.1.0.tgz \
   --bundle provenance.sigstore.json \
   --repo fabian-barney/cognitive-typescript \
   --cert-identity https://github.com/fabian-barney/cognitive-typescript/.github/workflows/release.yml@refs/heads/main \

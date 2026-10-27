@@ -40,7 +40,7 @@ CI expectations for pull requests:
 Before merging a release version bump, also run:
 
 ```bash
-npm run verify-release-version -- v1.0.0
+npm run verify-release-version -- v1.1.0
 npm run test:release
 npm run release:artifacts
 npm run release:smoke
