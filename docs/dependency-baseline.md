@@ -55,7 +55,7 @@ and 26.0.0 without installing the private source workspace.
 - PostCSS requires nanoid `^3.3.20`; the compatible patched resolution is 3.3.20 rather than nanoid 6.
   The redundant nanoid override and obsolete TOON 2.3.1 override have been removed.
 - checkout 7.0.1, upload-artifact 7.0.2, download-artifact 8.0.2, and attest 4.2.2 remain current.
-  Package versions remain 1.0.0; these changes are staged under Unreleased for a separate release decision.
+  These changes are included in the aligned 1.1.0 release of all four public packages.
 
 ## Advisory status
 
