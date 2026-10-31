@@ -31,7 +31,7 @@ npm pack --workspaces
 CI expectations for pull requests:
 
 - Build, unit tests, and packaged consumers run on all nine supported Node/OS combinations.
-- Ubuntu runs lint, format, quality gates, and packaging on Node 24.22.1/npm 12.2.1.
+- Ubuntu runs lint, format, quality gates, and packaging on Node 24.22.2/npm 12.2.1.
 - Consumer-minimum jobs use npm 11.15.0 solely to install archives on Node 22.13.0, 24.0.0, and 26.0.0.
 - `verify / required` includes every matrix and rejects failed, skipped, or cancelled prerequisites.
 - `npm run cognitive-typescript-check` is the repository self-gate for the published package sources.
