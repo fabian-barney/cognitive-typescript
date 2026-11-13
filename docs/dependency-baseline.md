@@ -55,12 +55,27 @@ and 26.0.0 without installing the private source workspace.
 - PostCSS requires nanoid `^3.3.20`; the compatible patched resolution is 3.3.20 rather than nanoid 6.
   The redundant nanoid override and obsolete TOON 2.3.1 override have been removed.
 - checkout 7.0.1, upload-artifact 7.0.2, download-artifact 8.0.2, and attest 4.2.2 remain current.
-  Package versions remain 1.0.0; these changes are staged under Unreleased for a separate release decision.
+  These changes are included in the aligned 1.1.0 release of all four public packages.
 
 ## Advisory status
 
-The refreshed workspace audit reports zero vulnerabilities as of this baseline. Re-audit the selected
-graph when dependencies change; direct-version freshness does not establish transitive advisory status.
+The October 24 baseline audit reported zero vulnerabilities. The release audit on 2026-11-13 reports
+25 moderate and five low affected-package entries across four distinct advisories, with no high or critical
+findings. Counts include propagated dependents. The resolved graph matches the dependencies already merged
+into main; this release preparation changes only workspace versions and internal core ranges.
+
+- [minimatch pattern amplification](https://github.com/advisories/GHSA-g3hv-75wg-m249) and
+  [glob cancellation handling](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4) affect the ESLint and/or
+  Jest host-tool graphs. Patched upstream majors are minimatch 11.0.1 and glob 14.0.2.
+- [deepmerge prototype poisoning](https://github.com/advisories/GHSA-gcqx-w48m-w2h4) affects the Jest
+  configuration graph; the advisory lists no patched version.
+- [fast-xml-parser stop-node scanning](https://github.com/advisories/GHSA-474x-hrwr-fgx4) affects locked
+  version 5.11.2 and is patched in 5.12.0. The analyzer uses XMLBuilder for JUnit output; it does not invoke
+  the affected XMLParser path with the non-default stopNodes option.
+
+Core, CLI, and Vitest runtime/peer SBOM closures contain only fast-xml-parser among these four affected
+leaf packages. The Jest peer closure also contains glob, minimatch, and deepmerge. Consumer resolution
+can differ within published ranges. Re-audit the selected graph during dependency maintenance.
 
 The October 18 assessment recorded sprintf-js through Jest/Istanbul -> `@istanbuljs/load-nyc-config`
 -> js-yaml -> argparse. CVE-2026-97058 was rejected on October 12, and GitHub subsequently
