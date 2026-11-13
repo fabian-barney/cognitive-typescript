@@ -6,7 +6,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
-## [1.1.0] - 2026-10-27
+## [1.1.0] - 2026-11-13
 
 ### Added
 
@@ -16,7 +16,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
-- Update compatible runtime and development dependency ranges and lockfile resolutions since v1.0.0.
+- Update compatible dependencies since v1.0.0, including ESLint 10.14.0 and typescript-eslint 8.72.1 from #98.
 - Update the private toolchain to npm 12.2.1 and current patched Node runtimes, Node 22 definitions,
   Vitest/coverage 5.0.5, Vite 8.3.5, CRAP gate 2.0.0, and setup-node 7.1.0.
 - Preserve npm 12 SBOM identities and runtime/peer closures, pack-result compatibility, archive verification,

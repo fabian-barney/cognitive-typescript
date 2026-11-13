@@ -25,7 +25,7 @@ Node 22, 24, and 26 are fully supported on Windows, macOS, and Linux, including 
 scheduled LTS transition on October 28, 2026. Published packages retain the installation floor `>=22.13.0`.
 
 Source builds require Node `^22.22.2 || ^24.15.0 || >=26.0.0` and npm `12.2.1`.
-Required CI builds, tests, and runs isolated packaged consumers on Node `22.23.4`, `24.22.1`, and `26.12.1`
+Required CI builds, tests, and runs isolated packaged consumers on Node `22.23.4`, `24.22.2`, and `26.13.0`
 across all three operating systems. Separate consumer checks verify Node `22.13.0`, `24.0.0`, and `26.0.0`.
 See [the dated runtime and dependency baseline](docs/dependency-baseline.md) for compatibility decisions.
 Locally, run:

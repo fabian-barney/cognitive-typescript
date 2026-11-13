@@ -1,5 +1,7 @@
 # Runtime and dependency baseline
 
+Maintenance versions refreshed on 2026-10-31 for #97.
+
 Updated on 2026-10-24 for [#91](https://github.com/fabian-barney/cognitive-typescript/issues/91),
 on top of compatible-dependency PR #93. Historical changelog entries retain their original release context.
 
@@ -15,9 +17,9 @@ not an official support commitment for EOL, odd-numbered, or otherwise unverifie
 The private source-build toolchain requires npm 12.2.1 and Node `^22.22.2 || ^24.15.0 || >=26.0.0`,
 the intersection of selected direct build-tool requirements, including npm 12, ESLint, and Vitest 5.
 
-Required build, unit-test, and packaged-consumer CI covers Node 22.23.4, 24.22.1, and 26.12.1 on all
-three operating systems. Quality, packaging, and release jobs use Node 24.22.1/npm 12.2.1.
-Separate Ubuntu consumer checks use npm 11.15.0 to install built archives on Node 22.13.0, 24.0.0,
+Required build, unit-test, and packaged-consumer CI covers Node 22.23.4, 24.22.2, and 26.13.0 on all
+three operating systems. Quality, packaging, and release jobs use Node 24.22.2/npm 12.2.1.
+Separate Ubuntu consumer checks use npm 11.21.1 to install built archives on Node 22.13.0, 24.0.0,
 and 26.0.0 without installing the private source workspace.
 
 ## Selected versions and compatibility decisions
@@ -28,7 +30,7 @@ and 26.0.0 without installing the private source workspace.
 | TypeScript | 6.0.3 |
 | Vitest / coverage-v8 / Vite | 5.0.5 / 5.0.5 / 8.3.5 |
 | Jest / ts-jest | 30.5.2 / 29.4.15 |
-| ESLint / typescript-eslint | 10.13.0 / 8.72.0 |
+| ESLint / typescript-eslint | 10.14.0 / 8.72.1 |
 | Prettier / eslint-config-prettier / @eslint/js | 3.9.10 / 10.1.8 / 10.0.1 |
 | globals / fast-xml-parser | 17.13.0 / 5.11.2 |
 | CRAP Vitest gate | 2.0.0, retaining its native threshold of 6 |
