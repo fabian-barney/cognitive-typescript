@@ -6,6 +6,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-14
+
+### Fixed
+
+- Update fast-xml-parser from 5.11.2 to 5.12.1, including compatible XML builder and safety-helper patches.
+  This dependency-only release contains no analyzer behavior or scoring changes.
+
 ## [1.1.0] - 2026-11-13
 
 ### Added
