@@ -1,6 +1,6 @@
 # Runtime and dependency baseline
 
-Maintenance versions refreshed on 2026-10-31 for #97.
+Maintenance versions refreshed on 2026-11-14 for #100.
 
 Updated on 2026-10-24 for [#91](https://github.com/fabian-barney/cognitive-typescript/issues/91),
 on top of compatible-dependency PR #93. Historical changelog entries retain their original release context.
@@ -14,24 +14,24 @@ See the [Node release schedule](https://github.com/nodejs/Release/blob/main/sche
 
 Published packages retain `engines.node: >=22.13.0`. This broad expression is an installation floor,
 not an official support commitment for EOL, odd-numbered, or otherwise unverified lines.
-The private source-build toolchain requires npm 12.2.1 and Node `^22.22.2 || ^24.15.0 || >=26.0.0`,
+The private source-build toolchain requires npm 12.2.2 and Node `^22.22.2 || ^24.15.0 || >=26.0.0`,
 the intersection of selected direct build-tool requirements, including npm 12, ESLint, and Vitest 5.
 
-Required build, unit-test, and packaged-consumer CI covers Node 22.23.4, 24.22.2, and 26.13.0 on all
-three operating systems. Quality, packaging, and release jobs use Node 24.22.2/npm 12.2.1.
-Separate Ubuntu consumer checks use npm 11.21.1 to install built archives on Node 22.13.0, 24.0.0,
+Required build, unit-test, and packaged-consumer CI covers Node 22.23.5, 24.22.3, and 26.13.1 on all
+three operating systems. Quality, packaging, and release jobs use Node 24.22.3/npm 12.2.2.
+Separate Ubuntu consumer checks use npm 11.21.2 to install built archives on Node 22.13.0, 24.0.0,
 and 26.0.0 without installing the private source workspace.
 
 ## Selected versions and compatibility decisions
 
 | Component | Baseline |
 | --- | --- |
-| npm / Node definitions | 12.2.1 / 22.20.5 |
+| npm / Node definitions | 12.2.2 / 22.20.5 |
 | TypeScript | 6.0.3 |
-| Vitest / coverage-v8 / Vite | 5.0.5 / 5.0.5 / 8.3.5 |
+| Vitest / coverage-v8 / Vite | 5.1.0 / 5.1.0 / 8.3.8 |
 | Jest / ts-jest | 30.5.2 / 29.4.15 |
-| ESLint / typescript-eslint | 10.14.0 / 8.72.1 |
-| Prettier / eslint-config-prettier / @eslint/js | 3.9.10 / 10.1.8 / 10.0.1 |
+| ESLint / typescript-eslint | 10.15.0 / 8.72.2 |
+| Prettier / eslint-config-prettier / @eslint/js | 3.10.1 / 10.1.8 / 10.0.1 |
 | globals / fast-xml-parser | 17.13.0 / 5.11.2 |
 | CRAP Vitest gate | 2.0.0, retaining its native threshold of 6 |
 | setup-node | 7.1.0, pinned to its immutable commit |
@@ -42,7 +42,7 @@ and 26.0.0 without installing the private source workspace.
   [#90](https://github.com/fabian-barney/cognitive-typescript/issues/90).
 - Node definitions intentionally follow the oldest supported runtime rather than latest Node 26 types,
   preventing compilation against APIs absent from Node 22. Runtime tests cover all supported lines.
-- The Vitest adapter accepts `^4.0.0 || ^5.0.0`. Isolated consumers install Vitest 4.1.12 and 5.0.5,
+- The Vitest adapter accepts `^4.0.0 || ^5.0.0`. Isolated consumers install Vitest 4.1.12 and 5.1.0,
   with identically versioned coverage providers and explicit Vite. Jest stays on major 30.
 - Cognitive Complexity remains static analysis: coverage is optional, completion callbacks publish once,
   and the threshold remains 8. The CRAP gate retains threshold 6 and supplies its own TOON 4.4 dependency.
