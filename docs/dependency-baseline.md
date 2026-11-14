@@ -42,7 +42,7 @@ and 26.0.0 without installing the private source workspace.
   [#90](https://github.com/fabian-barney/cognitive-typescript/issues/90).
 - Node definitions intentionally follow the oldest supported runtime rather than latest Node 26 types,
   preventing compilation against APIs absent from Node 22. Runtime tests cover all supported lines.
-- The Vitest adapter accepts `^4.0.0 || ^5.0.0`. Isolated consumers install Vitest 4.1.12 and 5.0.5,
+- The Vitest adapter accepts `^4.0.0 || ^5.0.0`. Isolated consumers install Vitest 4.1.12 and 5.1.0,
   with identically versioned coverage providers and explicit Vite. Jest stays on major 30.
 - Cognitive Complexity remains static analysis: coverage is optional, completion callbacks publish once,
   and the threshold remains 8. The CRAP gate retains threshold 6 and supplies its own TOON 4.4 dependency.
