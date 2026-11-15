@@ -13,7 +13,7 @@ All changes in this repository are expected to be issue-linked.
 
 ## Local validation
 
-Use npm `12.2.1` with Node `^22.22.2 || ^24.15.0 || >=26.0.0` for source builds.
+Use npm `12.2.2` with Node `^22.22.2 || ^24.15.0 || >=26.0.0` for source builds.
 Run the full validation command set before pushing. Required CI independently builds, tests, and
 executes packaged Vitest 4/5 and Jest consumers on Windows, macOS, and Linux with Node 22/24/26:
 
@@ -31,8 +31,8 @@ npm pack --workspaces
 CI expectations for pull requests:
 
 - Build, unit tests, and packaged consumers run on all nine supported Node/OS combinations.
-- Ubuntu runs lint, format, quality gates, and packaging on Node 24.22.2/npm 12.2.1.
-- Consumer-minimum jobs use npm 11.21.1 solely to install archives on Node 22.13.0, 24.0.0, and 26.0.0.
+- Ubuntu runs lint, format, quality gates, and packaging on Node 24.22.3/npm 12.2.2.
+- Consumer-minimum jobs use npm 11.21.2 solely to install archives on Node 22.13.0, 24.0.0, and 26.0.0.
 - `verify / required` includes every matrix and rejects failed, skipped, or cancelled prerequisites.
 - `npm run cognitive-typescript-check` is the repository self-gate for the published package sources.
 - `npm run crap-typescript-check` is the sibling CRAP gate for the same published package sources.

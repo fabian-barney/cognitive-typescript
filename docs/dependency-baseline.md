@@ -1,6 +1,6 @@
 # Runtime and dependency baseline
 
-Maintenance versions refreshed on 2026-10-31 for #97.
+Maintenance versions refreshed on 2026-11-14 for #100.
 
 Updated on 2026-10-24 for [#91](https://github.com/fabian-barney/cognitive-typescript/issues/91),
 on top of compatible-dependency PR #93. Historical changelog entries retain their original release context.
@@ -8,31 +8,31 @@ on top of compatible-dependency PR #93. Historical changelog entries retain thei
 ## Support policy
 
 Official support covers maintained Node.js LTS lines and released lines officially scheduled to become LTS.
-Node 22, 24, and 26 receive full support on Windows, macOS, and Linux, including Node 26 before its
-scheduled LTS transition on 2026-10-28. Use current security patches in each supported line.
+Node 22, 24, and 26 are maintained LTS lines and receive full support on Windows, macOS, and Linux.
+Use current security patches in each supported line.
 See the [Node release schedule](https://github.com/nodejs/Release/blob/main/schedule.json).
 
 Published packages retain `engines.node: >=22.13.0`. This broad expression is an installation floor,
 not an official support commitment for EOL, odd-numbered, or otherwise unverified lines.
-The private source-build toolchain requires npm 12.2.1 and Node `^22.22.2 || ^24.15.0 || >=26.0.0`,
+The private source-build toolchain requires npm 12.2.2 and Node `^22.22.2 || ^24.15.0 || >=26.0.0`,
 the intersection of selected direct build-tool requirements, including npm 12, ESLint, and Vitest 5.
 
-Required build, unit-test, and packaged-consumer CI covers Node 22.23.4, 24.22.2, and 26.13.0 on all
-three operating systems. Quality, packaging, and release jobs use Node 24.22.2/npm 12.2.1.
-Separate Ubuntu consumer checks use npm 11.21.1 to install built archives on Node 22.13.0, 24.0.0,
+Required build, unit-test, and packaged-consumer CI covers Node 22.23.5, 24.22.3, and 26.13.1 on all
+three operating systems. Quality, packaging, and release jobs use Node 24.22.3/npm 12.2.2.
+Separate Ubuntu consumer checks use npm 11.21.2 to install built archives on Node 22.13.0, 24.0.0,
 and 26.0.0 without installing the private source workspace.
 
 ## Selected versions and compatibility decisions
 
 | Component | Baseline |
 | --- | --- |
-| npm / Node definitions | 12.2.1 / 22.20.5 |
+| npm / Node definitions | 12.2.2 / 22.20.5 |
 | TypeScript | 6.0.3 |
-| Vitest / coverage-v8 / Vite | 5.0.5 / 5.0.5 / 8.3.5 |
+| Vitest / coverage-v8 / Vite | 5.1.0 / 5.1.0 / 8.3.8 |
 | Jest / ts-jest | 30.5.2 / 29.4.15 |
-| ESLint / typescript-eslint | 10.14.0 / 8.72.1 |
-| Prettier / eslint-config-prettier / @eslint/js | 3.9.10 / 10.1.8 / 10.0.1 |
-| globals / fast-xml-parser | 17.13.0 / 5.11.2 |
+| ESLint / typescript-eslint | 10.15.0 / 8.72.2 |
+| Prettier / eslint-config-prettier / @eslint/js | 3.10.1 / 10.1.8 / 10.0.1 |
+| globals / fast-xml-parser | 17.14.0 / 5.12.1 |
 | CRAP Vitest gate | 2.0.0, retaining its native threshold of 6 |
 | setup-node | 7.1.0, pinned to its immutable commit |
 
@@ -42,8 +42,21 @@ and 26.0.0 without installing the private source workspace.
   [#90](https://github.com/fabian-barney/cognitive-typescript/issues/90).
 - Node definitions intentionally follow the oldest supported runtime rather than latest Node 26 types,
   preventing compilation against APIs absent from Node 22. Runtime tests cover all supported lines.
-- The Vitest adapter accepts `^4.0.0 || ^5.0.0`. Isolated consumers install Vitest 4.1.12 and 5.0.5,
+- The Vitest adapter accepts `^4.0.0 || ^5.0.0`. Isolated consumers install Vitest 4.1.12 and 5.1.0,
   with identically versioned coverage providers and explicit Vite. Jest stays on major 30.
+- Vite 8.3.8 accepts rolldown `~1.2.18` and resolves the newest patch, 1.2.19. Rolldown listed its optional
+  `@rolldown/binding-wasm32-wasi` fallback through 1.2.1, omitted it from 1.2.2 through 1.2.18, and restores
+  it in 1.2.19 and 1.3.0. That binding pinned stable `@emnapi/core` and `@emnapi/runtime` 1.x through
+  1.2.0 and has pinned exact 2.0 prereleases since 1.2.1, currently 2.0.0-beta.2 from 1.2.16 onward.
+  In-range rolldown 1.2.18 lists no WASI fallback, but holding it would need an override below the natural
+  newest-patch resolution that every refresh would revisit, so 1.2.19 is retained. The binding is limited to
+  `cpu: wasm32`, so supported hosts install native bindings only, and no published package depends on it.
+  The Vitest SBOM lists these entries with optional scope because Vitest is a peer. On 2026-11-15, a forced
+  Linux x64 fallback (`NAPI_RS_FORCE_WASI=error`, Node 26.13.1) loaded the WASI binding with emnapi
+  2.0.0-beta.2 and passed 137 of 138 unit tests. The remaining Jest child fails only because unrs-resolver
+  honors the same flag and ships no WASI binding; `NAPI_RS_FORCE_WASI=true` passed all 138. On Windows the
+  WASI fallback transforms in-memory sources but cannot resolve drive-letter paths; Windows hosts use native
+  bindings. No override forces emnapi 1.x against the exact upstream pin.
 - Cognitive Complexity remains static analysis: coverage is optional, completion callbacks publish once,
   and the threshold remains 8. The CRAP gate retains threshold 6 and supplies its own TOON 4.4 dependency.
 - Repository unit tests resolve the core workspace import to its source entrypoint, avoiding duplicated
@@ -59,23 +72,23 @@ and 26.0.0 without installing the private source workspace.
 
 ## Advisory status
 
-The October 24 baseline audit reported zero vulnerabilities. The release audit on 2026-11-13 reports
-25 moderate and five low affected-package entries across four distinct advisories, with no high or critical
-findings. Counts include propagated dependents. The resolved graph matches the dependencies already merged
-into main; this release preparation changes only workspace versions and internal core ranges.
+The October 24 baseline audit reported zero vulnerabilities. The maintenance audit on 2026-11-15 reports
+22 moderate and four low affected-package entries across three distinct advisories, with no high or
+critical findings. Counts include propagated dependents. The fourth advisory from the 2026-11-13 release
+audit was resolved by fast-xml-parser 5.12.1 from #99, released in 1.1.1.
 
 - [minimatch pattern amplification](https://github.com/advisories/GHSA-g3hv-75wg-m249) and
   [glob cancellation handling](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4) affect the ESLint and/or
   Jest host-tool graphs. Patched upstream majors are minimatch 11.0.1 and glob 14.0.2.
 - [deepmerge prototype poisoning](https://github.com/advisories/GHSA-gcqx-w48m-w2h4) affects the Jest
   configuration graph; the advisory lists no patched version.
-- [fast-xml-parser stop-node scanning](https://github.com/advisories/GHSA-474x-hrwr-fgx4) affects locked
-  version 5.11.2 and is patched in 5.12.0. The analyzer uses XMLBuilder for JUnit output; it does not invoke
-  the affected XMLParser path with the non-default stopNodes option.
+- [fast-xml-parser stop-node scanning](https://github.com/advisories/GHSA-474x-hrwr-fgx4) affected
+  version 5.11.2 and is resolved by the locked 5.12.1. The analyzer uses XMLBuilder for JUnit output; it
+  never invoked the affected XMLParser path with the non-default stopNodes option.
 
-Core, CLI, and Vitest runtime/peer SBOM closures contain only fast-xml-parser among these four affected
-leaf packages. The Jest peer closure also contains glob, minimatch, and deepmerge. Consumer resolution
-can differ within published ranges. Re-audit the selected graph during dependency maintenance.
+Core, CLI, and Vitest runtime/peer SBOM closures contain none of the three remaining affected leaf
+packages. The Jest peer closure contains glob, minimatch, and deepmerge. Consumer resolution can differ
+within published ranges. Re-audit the selected graph during dependency maintenance.
 
 The October 18 assessment recorded sprintf-js through Jest/Istanbul -> `@istanbuljs/load-nyc-config`
 -> js-yaml -> argparse. CVE-2026-97058 was rejected on October 12, and GitHub subsequently
