@@ -46,8 +46,8 @@ and 26.0.0 without installing the private source workspace.
   with identically versioned coverage providers and explicit Vite. Jest stays on major 30.
 - Vite 8.3.8 accepts rolldown `~1.2.18` and resolves the newest patch, 1.2.19. Rolldown listed its optional
   `@rolldown/binding-wasm32-wasi` fallback through 1.2.1, omitted it from 1.2.2 through 1.2.18, and restores
-  it in 1.2.19 and 1.3.0. That binding pins exact `@emnapi/core` and `@emnapi/runtime` 2.0 prereleases:
-  2.0.0-alpha.3 in 1.2.1, 2.0.0-alpha.5 in 1.2.9 through 1.2.15, and 2.0.0-beta.2 since 1.2.16.
+  it in 1.2.19 and 1.3.0. That binding pinned stable `@emnapi/core` and `@emnapi/runtime` 1.x through
+  1.2.0 and has pinned exact 2.0 prereleases since 1.2.1, currently 2.0.0-beta.2 from 1.2.16 onward.
   In-range rolldown 1.2.18 lists no WASI fallback, but holding it would need an override below the natural
   newest-patch resolution that every refresh would revisit, so 1.2.19 is retained. The binding is limited to
   `cpu: wasm32`, so supported hosts install native bindings only, and no published package depends on it.
