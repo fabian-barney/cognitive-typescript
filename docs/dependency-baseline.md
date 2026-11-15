@@ -44,9 +44,10 @@ and 26.0.0 without installing the private source workspace.
   preventing compilation against APIs absent from Node 22. Runtime tests cover all supported lines.
 - The Vitest adapter accepts `^4.0.0 || ^5.0.0`. Isolated consumers install Vitest 4.1.12 and 5.1.0,
   with identically versioned coverage providers and explicit Vite. Jest stays on major 30.
-- Vite 8.3.8 accepts rolldown `~1.2.18` and resolves the newest patch, 1.2.19. Rolldown first lists the
-  optional `@rolldown/binding-wasm32-wasi` fallback in 1.2.19 and 1.3.0; that binding has pinned
-  `@emnapi/core` and `@emnapi/runtime` to exactly 2.0.0-beta.2 since 1.2.16 (2.0.0-alpha.5 before).
+- Vite 8.3.8 accepts rolldown `~1.2.18` and resolves the newest patch, 1.2.19. Rolldown listed its optional
+  `@rolldown/binding-wasm32-wasi` fallback through 1.2.1, omitted it from 1.2.2 through 1.2.18, and restores
+  it in 1.2.19 and 1.3.0. That binding pins exact `@emnapi/core` and `@emnapi/runtime` 2.0 prereleases:
+  2.0.0-alpha.3 in 1.2.1, 2.0.0-alpha.5 in 1.2.9 through 1.2.15, and 2.0.0-beta.2 since 1.2.16.
   In-range rolldown 1.2.18 lists no WASI fallback, but holding it would need an override below the natural
   newest-patch resolution that every refresh would revisit, so 1.2.19 is retained. The binding is limited to
   `cpu: wasm32`, so supported hosts install native bindings only, and no published package depends on it.
